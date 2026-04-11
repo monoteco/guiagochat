@@ -37,3 +37,25 @@ class CRMDealResponse(BaseModel):
 
 class CRMPhaseUpdate(BaseModel):
     phase: str
+
+
+# ---------- Simulate / Classify ----------
+
+class SimulateRequest(BaseModel):
+    client_email: str
+    client_name: str = ""
+
+
+class SimulateResponse(BaseModel):
+    response: str
+    sources: list[str] = []
+
+
+class ClassifyRequest(BaseModel):
+    text: str
+
+
+class ClassifyResponse(BaseModel):
+    raw: str
+    parsed: dict = {}
+    sources: list[str] = []

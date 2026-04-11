@@ -1,5 +1,22 @@
 # GuiaGo Chat - Proceso de Entrenamiento
 
+## Estado actual: FUNCIONANDO en caro
+
+| Componente | Detalle |
+|---|---|
+| **Modelo** | Meta Llama 3.1 8B Instruct (quantizado Q4_K_M) |
+| **Peso del modelo** | 4.9 GB en disco (original FP16 sería ~16 GB) |
+| **Formato** | GGUF (via Ollama) |
+| **Origen** | HuggingFace: bartowski/Meta-Llama-3.1-8B-Instruct-GGUF |
+| **Servidor LLM** | Ollama nativo (CPU-only, sin GPU) |
+| **Embeddings** | all-MiniLM-L6-v2 (ChromaDB default, ~80 MB) |
+| **Base vectorial** | ChromaDB 1.5.7 persistente |
+| **API** | FastAPI en puerto 8080 |
+| **Datos ingestados** | 3496 correos de correosGo.db |
+| **Velocidad respuesta** | ~1-2 min por pregunta (CPU puro, i9-9980HK) |
+
+---
+
 ## Importante: esto NO es fine-tuning
 
 No reentrenamos el modelo Llama. Usamos **RAG** (Retrieval Augmented Generation):
@@ -11,19 +28,46 @@ el modelo busca en tus datos y responde basandose en ellos. Esto significa que:
 
 ---
 
+## Modelo actual: Llama 3.1 8B Instruct Q4_K_M
+
+- **Parametros**: 8 mil millones (8B)
+- **Quantización**: Q4_K_M (4 bits, buen balance calidad/tamaño)
+- **Tamaño en disco**: 4.9 GB
+- **RAM en uso**: ~6-7 GB durante inferencia
+- **Contexto**: 4096 tokens (configurable hasta 128K, pero consume más RAM)
+- **Idiomas**: Multilingüe (español incluido, aunque mejor en inglés)
+- **Velocidad**: ~5-8 tokens/segundo en i9-9980HK (CPU-only)
+
+### Otros modelos candidatos para descargar
+
+| Modelo | Params | Tamaño Q4 | Para qué |
+|---|---|---|---|
+| **Mistral 7B Instruct v0.3** | 7B | ~4.1 GB | Rápido, buen español |
+| **Gemma 2 9B Instruct** | 9B | ~5.4 GB | Muy bueno en razonamiento |
+| **Llama 3.1 70B Q2_K** | 70B | ~26 GB | Mucho mejor calidad, cabe en 64GB RAM (ajustado) |
+| **Phi-3 Mini 3.8B** | 3.8B | ~2.2 GB | Ultra rápido, para pruebas |
+| **Qwen 2.5 7B Instruct** | 7B | ~4.4 GB | Excelente multilingüe |
+
+> Se pueden tener varios modelos instalados a la vez en Ollama.
+> Para descargar desde HuggingFace (Cloudflare R2 bloqueado en la oficina):
+> `curl -L -o modelo.gguf https://huggingface.co/REPO/resolve/main/ARCHIVO.gguf`
+> Luego `ollama create nombre:tag -f Modelfile`
+
+---
+
 ## Flujo de datos
 
 ```
 TUS DATOS (BD, correos, docs)
         |
         v
-  [INGESTA] --> trocea textos en chunks de ~1000 chars
+  [INGESTA] --> trocea textos en chunks de ~3000 chars
         |
         v
-  [EMBEDDINGS] --> convierte cada chunk en un vector numerico
+  [EMBEDDINGS] --> convierte cada chunk en un vector numerico (all-MiniLM-L6-v2)
         |
         v
-  [ChromaDB] --> almacena vectores + texto original
+  [ChromaDB] --> almacena vectores + texto original (en /home/caro/guiagochat/chroma_db/)
         |
         v
   [CONSULTA] --> usuario pregunta algo
@@ -32,158 +76,93 @@ TUS DATOS (BD, correos, docs)
   [BUSQUEDA SEMANTICA] --> encuentra los 5 chunks mas relevantes
         |
         v
-  [LLM (Llama 3.1)] --> genera respuesta usando SOLO esos chunks como contexto
+  [LLM (Llama 3.1 8B)] --> genera respuesta usando SOLO esos chunks como contexto
 ```
 
 ---
 
-## Fuentes de datos soportadas
+## Fuentes de datos
 
-### 1. Base de datos (SQL / PostgreSQL / MySQL / SQLite)
+### 1. correosGo.db (HECHO - 3496 correos indexados)
 
-**Tu nos dices donde esta la BD** y creamos un conector que:
-- Se conecta a la BD
-- Extrae registros relevantes (clientes, ventas, fases, historico)
-- Los convierte en documentos de texto
-- Los indexa en ChromaDB
-
-Ejemplo de lo que extraeria:
-
-```
-Cliente: Hotel Miramar
-Email: info@miramar.com
-Fecha alta: 2024-03-15
-Fase actual: produccion
-Producto: Tour privado Barcelona x20 pax
-Notas: Confirmado para junio, pendiente transfer aeropuerto
-Historico: lead(mar) -> contactado(mar) -> propuesta(abr) -> cerrado(may) -> produccion(may)
-```
-
-**Que necesito de ti:**
-- Tipo de BD (PostgreSQL, MySQL, SQLite, MongoDB, Google Sheets...)
-- Host/IP y puerto (o ruta del archivo si es SQLite)
-- Nombre de la BD
-- Usuario y contrasena de lectura
-- Tablas principales (clientes, ventas, productos, etc.)
-
-### 2. Correos electronicos (.eml)
-
-- Exporta correos desde Gmail/Outlook en formato .eml
-- Copialos a `data/emails/` en el miniPC
-- Ejecuta la ingesta:
+Base de datos SQLite con correos de GuiaGo. Tabla `correos`:
+- Campos: id, mailbox, de, para, cc, asunto, fecha, cuerpo_txt, account, resumen_ia, fase_ia
+- Filtro: solo INBOX y Elementos enviados
+- Truncado: body a 3000 chars por chunk
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/ingest/emails \
+curl -X POST http://caro:8080/api/v1/ingest/db \
+  -H 'Content-Type: application/json' \
+  -d '{"collection": "emails"}'
+```
+
+### 2. BDClientes.db (PENDIENTE - 56 registros)
+
+SQLite con clientes. Schema diferente: remitente, cuerpo, hilo, categoria.
+Falta crear loader específico.
+
+### 3. BDPreclientes.db (PENDIENTE - 166 registros)
+
+SQLite con preclientes. Mismo schema que BDClientes.
+Falta crear loader específico.
+
+### 4. Documentos de texto (.txt)
+
+Guardar en `data/documents/` y ejecutar:
+
+```bash
+curl -X POST http://caro:8080/api/v1/ingest/documents \
   -H 'Content-Type: application/json' -d '{}'
 ```
 
-### 3. Documentos de texto (.txt)
-
-Cualquier documento interno: procesos, guias, plantillas de respuesta, FAQs:
-
-- Guardalos como .txt en `data/documents/`
-- Ejecuta:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/ingest/documents \
-  -H 'Content-Type: application/json' -d '{}'
-```
-
-### 4. PDFs (pendiente de implementar)
-
-Se anadira un loader de PDFs con PyMuPDF.
-
-### 5. Google Sheets / Excel (pendiente de implementar)
-
-Si el CRM esta en Sheets o Excel, se hara un conector especifico.
+### 5. PDFs, Google Sheets, Excel (pendiente de implementar)
 
 ---
 
-## Proceso paso a paso
+## Arranque y operación
 
-### Paso 1: Identificar las fuentes de datos
-Dime donde esta tu BD y que tablas tienen la info de:
-- Clientes (nombre, email, telefono)
-- Ventas/deals (producto, precio, fecha, fase)
-- Historico de fases (cuando cambio cada deal de fase)
-- Correos importantes (o exporta .eml)
-
-### Paso 2: Crear el conector de BD
-Creo un script `backend/app/ingestion/db_loader.py` que:
-1. Se conecta a tu BD
-2. Lee las tablas que nos digas
-3. Genera documentos con el contexto completo de cada cliente/venta
-4. Los indexa en ChromaDB
-
-### Paso 3: Ingesta inicial
-Ejecutamos la ingesta de todos los datos existentes. Esto puede tardar
-unos minutos dependiendo del volumen.
-
-### Paso 4: Ingesta periodica (cron)
-Configuramos un cron job en el miniPC que re-indexe los datos
-cada X horas para mantener todo actualizado:
+### Arrancar todo (si caro se reinicia)
 
 ```bash
-# Ejemplo: cada 2 horas
-0 */2 * * * curl -s -X POST http://localhost:8000/api/v1/ingest/db > /dev/null
+ssh caro@100.103.98.125
+bash ~/guiagochat/start.sh
 ```
 
-### Paso 5: Probar consultas
+### Probar que funciona
+
 ```bash
-# Preguntar por un cliente
-curl -X POST http://localhost:8000/api/v1/chat \
-  -H 'Content-Type: application/json' \
-  -d '{"message": "En que fase esta el Hotel Miramar?"}'
+# Health check
+curl http://caro:8080/health
 
-# Pedir sugerencia de respuesta a un correo
-curl -X POST http://localhost:8000/api/v1/chat \
+# Preguntar algo
+curl -X POST http://caro:8080/api/v1/chat \
   -H 'Content-Type: application/json' \
-  -d '{"message": "El cliente Hotel Playa pide cambiar la fecha del tour. Sugiere una respuesta.", "collection": "emails"}'
+  -d '{"message": "Quien es el cliente que mas correos ha enviado?", "collection": "emails"}'
+```
 
-# Consultar pipeline de ventas
-curl -X POST http://localhost:8000/api/v1/chat \
-  -H 'Content-Type: application/json' \
-  -d '{"message": "Cuantos deals hay en fase de negociacion?"}'
+### Ver logs
+
+```bash
+tail -f ~/guiagochat/logs/api.log
 ```
 
 ---
 
 ## Colecciones en ChromaDB
 
-Los datos se organizan en colecciones separadas:
-
-| Coleccion     | Contenido                          |
-|---------------|-------------------------------------|
-| `general`   | Documentos internos, procesos, FAQs |
-| `emails`    | Correos electronicos indexados       |
-| `crm_deals` | Datos del CRM (clientes + fases)     |
-| `db_sync`   | Datos sincronizados de tu BD         |
-
-Puedes consultar una coleccion especifica o todas a la vez.
+| Coleccion | Contenido | Estado |
+|---|---|---|
+| `emails` | 3496 correos de correosGo.db | ACTIVA |
+| `general` | Documentos internos, procesos, FAQs | Vacía |
+| `crm_deals` | Datos del CRM (clientes + fases) | Vacía |
 
 ---
 
-## Actualizacion de datos
+## Pendiente
 
-| Metodo            | Frecuencia      | Como                              |
-|-------------------|-----------------|-----------------------------------|
-| Manual            | Cuando quieras  | `curl POST /ingest/...`         |
-| Cron automatico   | Cada 2h (o lo que digas) | crontab en el miniPC     |
-| Webhook           | Tiempo real     | Se puede conectar a tu sistema    |
-
----
-
-## Metricas de calidad
-
-Despues de la ingesta, podemos verificar:
-- Numero de documentos indexados por coleccion
-- Probar consultas de ejemplo y evaluar las respuestas
-- Ajustar el tamano de chunk y overlap si las respuestas son imprecisas
-- Cambiar el numero de chunks recuperados (actualmente 5)
-
----
-
-## Siguiente paso
-
-**Dime donde esta la BD de GuiaGo** (tipo, host, tablas principales)
-y creo el conector `db_loader.py` para empezar la ingesta real.
+- [ ] Loaders para BDClientes.db y BDPreclientes.db
+- [ ] Systemd service para auto-start al boot de caro
+- [ ] Cron de re-ingesta periódica
+- [ ] Frontend web
+- [ ] Probar modelos adicionales (Mistral, Gemma 2)
+- [ ] Evaluar calidad de respuestas y ajustar chunks/overlap
