@@ -59,3 +59,22 @@ class ClassifyResponse(BaseModel):
     raw: str
     parsed: dict = {}
     sources: list[str] = []
+
+
+# ---------- Comparar modelos ----------
+
+class CompareRequest(BaseModel):
+    message: str
+    collection: str = "emails"
+    models: list[str] = []
+
+
+class ModelResult(BaseModel):
+    model: str
+    answer: str
+    elapsed: float
+
+
+class CompareResponse(BaseModel):
+    results: list[ModelResult]
+    sources: list[str] = []

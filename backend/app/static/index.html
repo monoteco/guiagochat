@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuiaGo Chat - Orquestador</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #1e40af, #7c3aed); padding: 1.5rem 2rem; display: flex; align-items: center; gap: 1rem; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; }
+        .header span { opacity: 0.7; font-size: 0.85rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tab { padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; background: #1e293b; border: 1px solid #334155; transition: all 0.2s; font-size: 0.9rem; color: #94a3b8; }
+        .tab:hover { background: #334155; color: #e2e8f0; }
+        .tab.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #334155; }
+        .card h2 { font-size: 1.1rem; margin-bottom: 0.3rem; color: #60a5fa; }
+        .card p.desc { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
+        label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.3rem; margin-top: 0.8rem; }
+        input, textarea, select { width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 0.9rem; font-family: inherit; }
+        textarea { resize: vertical; min-height: 100px; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; }
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; margin-top: 1rem; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-green { background: #10b981; color: white; }
+        .btn-green:hover { background: #059669; }
+        .btn-purple { background: #8b5cf6; color: white; }
+        .btn-purple:hover { background: #7c3aed; }
+        .btn-orange { background: #f59e0b; color: #1e293b; }
+        .btn-orange:hover { background: #d97706; }
+        .btn:disabled { opacity: 0.5; cursor: wait; }
+        .result { margin-top: 1rem; padding: 1rem; border-radius: 8px; background: #0f172a; border: 1px solid #334155; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; display: none; }
+        .result.show { display: block; }
+        .result .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 0.3rem; }
+        .result .answer { color: #e2e8f0; }
+        .result .sources { margin-top: 0.5rem; font-size: 0.8rem; color: #64748b; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 0.5rem 2rem; background: #1e293b; border-top: 1px solid #334155; font-size: 0.8rem; color: #64748b; display: flex; justify-content: space-between; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; }
+        .status-dot.green { background: #10b981; }
+        .status-dot.red { background: #ef4444; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        .phase-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; background: #334155; color: #94a3b8; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>GuiaGo Chat</h1>
+        <span>Orquestador IA &mdash; caro miniPC</span>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="chat">Chat</div>
+            <div class="tab" data-tab="simulate">Simular Carolina</div>
+            <div class="tab" data-tab="classify">Clasificar</div>
+            <div class="tab" data-tab="ingest">Ingesta</div>
+            <div class="tab" data-tab="compare">Comparar modelos</div>
+            <div class="tab" data-tab="crm">CRM</div>
+        </div>
+
+        <!-- CHAT -->
+        <div id="panel-chat" class="panel active">
+            <div class="card">
+                <h2>Chat con los datos de GuiaGo</h2>
+                <p class="desc">Pregunta lo que quieras sobre correos, clientes y operaciones</p>
+                <label for="chat-msg">Pregunta</label>
+                <textarea id="chat-msg" placeholder="Ej: Quien es el cliente que mas correos ha enviado?"></textarea>
+                <label for="chat-col">Coleccion</label>
+                <select id="chat-col">
+                    <option value="emails">emails (correos)</option>
+                    <option value="general">general</option>
+                    <option value="crm_deals">crm_deals</option>
+                </select>
+                <button class="btn btn-primary" onclick="doChat()">Enviar</button>
+                <div id="chat-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- SIMULATE -->
+        <div id="panel-simulate" class="panel">
+            <div class="card">
+                <h2>Simular respuesta de Carolina</h2>
+                <p class="desc">Pega el correo del cliente y el sistema genera una respuesta como lo haria Carolina</p>
+                <label for="sim-name">Nombre del cliente (opcional)</label>
+                <input id="sim-name" placeholder="Ej: Hotel Miramar">
+                <label for="sim-email">Correo del cliente</label>
+                <textarea id="sim-email" placeholder="Hola, somos un grupo de 25 personas y nos gustaria hacer un tour privado por Barcelona..."></textarea>
+                <button class="btn btn-purple" onclick="doSimulate()">Generar respuesta de Carolina</button>
+                <div id="sim-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- CLASSIFY -->
+        <div id="panel-classify" class="panel">
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Clasificar tipo de negocio</h2>
+                    <p class="desc">tour_privado, grupal, corporativo, evento, transfer...</p>
+                    <label for="biz-text">Texto del correo o hilo</label>
+                    <textarea id="biz-text" placeholder="Pega aqui el correo o descripcion del deal..."></textarea>
+                    <button class="btn btn-orange" onclick="doClassifyBiz()">Clasificar negocio</button>
+                    <div id="biz-result" class="result"></div>
+                </div>
+                <div class="card">
+                    <h2>Detectar fase del funnel</h2>
+                    <p class="desc">lead &rarr; contactado &rarr; propuesta &rarr; negociacion &rarr; cerrado &rarr; produccion &rarr; finalizado</p>
+                    <label for="phase-text">Texto del correo o hilo</label>
+                    <textarea id="phase-text" placeholder="Pega aqui el correo o descripcion del deal..."></textarea>
+                    <button class="btn btn-orange" onclick="doClassifyPhase()">Detectar fase</button>
+                    <div id="phase-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INGEST -->
+        <div id="panel-ingest" class="panel">
+            <div class="card">
+                <h2>Ingesta de datos</h2>
+                <p class="desc">Re-indexar datos de la base de datos en ChromaDB</p>
+                <label for="ing-col">Coleccion destino</label>
+                <input id="ing-col" value="emails">
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <button class="btn btn-green" onclick="doIngest('db')">Ingestar BD (correosGo.db)</button>
+                    <button class="btn btn-green" onclick="doIngest('emails')">Ingestar .eml</button>
+                    <button class="btn btn-green" onclick="doIngest('documents')">Ingestar .txt</button>
+                </div>
+                <div id="ing-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- COMPARE -->
+        <div id="panel-compare" class="panel">
+            <div class="card">
+                <h2>Comparar modelos</h2>
+                <p class="desc">Envia la misma pregunta a todos los modelos instalados y compara las respuestas</p>
+                <label for="cmp-msg">Pregunta</label>
+                <textarea id="cmp-msg" placeholder="Ej: Resume los correos mas importantes de la ultima semana"></textarea>
+                <label for="cmp-col">Coleccion</label>
+                <select id="cmp-col">
+                    <option value="emails">emails (correos)</option>
+                    <option value="general">general</option>
+                    <option value="crm_deals">crm_deals</option>
+                </select>
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem;">
+                    <span style="font-size:0.8rem;color:#64748b;">Modelos disponibles:</span>
+                    <span id="cmp-models" style="font-size:0.8rem;color:#94a3b8;">cargando...</span>
+                </div>
+                <button class="btn btn-primary" onclick="doCompare()">Comparar todos los modelos</button>
+                <div id="cmp-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- CRM -->
+        <div id="panel-crm" class="panel">
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Crear deal</h2>
+                    <label for="crm-name">Cliente</label>
+                    <input id="crm-name" placeholder="Hotel Miramar">
+                    <label for="crm-email">Email</label>
+                    <input id="crm-email" placeholder="info@miramar.com">
+                    <label for="crm-phase">Fase</label>
+                    <select id="crm-phase">
+                        <option>lead</option><option>contactado</option><option>propuesta</option>
+                        <option>negociacion</option><option>cerrado</option><option>produccion</option><option>finalizado</option>
+                    </select>
+                    <label for="crm-notes">Notas</label>
+                    <textarea id="crm-notes" rows="2" placeholder="Tour privado 25 pax..."></textarea>
+                    <button class="btn btn-primary" onclick="doCreateDeal()">Crear deal</button>
+                    <div id="crm-create-result" class="result"></div>
+                </div>
+                <div class="card">
+                    <h2>Deals existentes</h2>
+                    <label for="crm-filter">Filtrar por fase (vacio = todos)</label>
+                    <input id="crm-filter" placeholder="Ej: propuesta">
+                    <button class="btn btn-primary" onclick="doListDeals()">Listar deals</button>
+                    <label for="crm-search" style="margin-top:1rem;">Buscar por texto</label>
+                    <input id="crm-search" placeholder="Ej: Miramar">
+                    <button class="btn btn-primary" onclick="doSearchDeals()">Buscar</button>
+                    <div id="crm-list-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span><span id="status-dot" class="status-dot green"></span> <span id="status-text">Conectado</span></span>
+        <span id="status-time"></span>
+    </div>
+
+    <script>
+    const API = '/api/v1';
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t => {
+        t.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Helpers
+    function showResult(id, html) {
+        const el = document.getElementById(id);
+        el.innerHTML = html;
+        el.classList.add('show');
+    }
+
+    function setLoading(btn, loading) {
+        if (loading) {
+            btn.disabled = true;
+            btn._text = btn.textContent;
+            btn.innerHTML = '<span class="spinner"></span> Procesando...';
+        } else {
+            btn.disabled = false;
+            btn.textContent = btn._text || 'Enviar';
+        }
+    }
+
+    async function apiCall(endpoint, method, body, btnEl, resultId) {
+        setLoading(btnEl, true);
+        const start = Date.now();
+        try {
+            const opts = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(API + endpoint, opts);
+            const data = await res.json();
+            const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+            if (!res.ok) {
+                showResult(resultId, `<div class="label">Error ${res.status}</div><div class="answer" style="color:#ef4444;">${JSON.stringify(data, null, 2)}</div>`);
+            } else {
+                return { data, elapsed };
+            }
+        } catch (e) {
+            showResult(resultId, `<div class="answer" style="color:#ef4444;">Error de conexion: ${e.message}</div>`);
+        } finally {
+            setLoading(btnEl, false);
+        }
+        return null;
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function sourceTags(sources) {
+        if (!sources || !sources.length) return '';
+        return '<div class="sources">Fuentes: ' + sources.map(s => `<span class="tag">${esc(s)}</span>`).join(' ') + '</div>';
+    }
+
+    // Chat
+    async function doChat() {
+        const msg = document.getElementById('chat-msg').value.trim();
+        if (!msg) return;
+        const btn = document.querySelector('#panel-chat .btn');
+        const r = await apiCall('/chat', 'POST', { message: msg, collection: document.getElementById('chat-col').value }, btn, 'chat-result');
+        if (r) showResult('chat-result',
+            `<div class="label">Respuesta (${r.elapsed}s)</div><div class="answer">${esc(r.data.answer)}</div>${sourceTags(r.data.sources)}`);
+    }
+
+    // Simulate
+    async function doSimulate() {
+        const email = document.getElementById('sim-email').value.trim();
+        if (!email) return;
+        const btn = document.querySelector('#panel-simulate .btn');
+        const r = await apiCall('/simulate/response', 'POST', {
+            client_email: email,
+            client_name: document.getElementById('sim-name').value.trim()
+        }, btn, 'sim-result');
+        if (r) showResult('sim-result',
+            `<div class="label">Respuesta de Carolina (${r.elapsed}s)</div><div class="answer">${esc(r.data.response)}</div>${sourceTags(r.data.sources)}`);
+    }
+
+    // Classify business
+    async function doClassifyBiz() {
+        const text = document.getElementById('biz-text').value.trim();
+        if (!text) return;
+        const btn = document.querySelector('#panel-classify .card:first-child .btn');
+        const r = await apiCall('/classify/business', 'POST', { text }, btn, 'biz-result');
+        if (r) {
+            const p = r.data.parsed || {};
+            showResult('biz-result',
+                `<div class="label">Clasificacion (${r.elapsed}s)</div><div class="answer">${esc(r.data.raw)}</div>${sourceTags(r.data.sources)}`);
+        }
+    }
+
+    // Classify phase
+    async function doClassifyPhase() {
+        const text = document.getElementById('phase-text').value.trim();
+        if (!text) return;
+        const btn = document.querySelector('#panel-classify .card:last-child .btn');
+        const r = await apiCall('/classify/phase', 'POST', { text }, btn, 'phase-result');
+        if (r) showResult('phase-result',
+            `<div class="label">Deteccion de fase (${r.elapsed}s)</div><div class="answer">${esc(r.data.raw)}</div>${sourceTags(r.data.sources)}`);
+    }
+
+    // Ingest
+    async function doIngest(type) {
+        const col = document.getElementById('ing-col').value.trim() || 'emails';
+        const btn = event.target;
+        const r = await apiCall(`/ingest/${type}`, 'POST', { collection: col }, btn, 'ing-result');
+        if (r) showResult('ing-result',
+            `<div class="label">Ingesta completada (${r.elapsed}s)</div><div class="answer">${r.data.documents_ingested} documentos indexados en "${esc(col)}"</div>`);
+    }
+
+    // CRM
+    async function doCreateDeal() {
+        const btn = document.querySelector('#panel-crm .card:first-child .btn');
+        const r = await apiCall('/crm/deals', 'POST', {
+            client_name: document.getElementById('crm-name').value.trim(),
+            email: document.getElementById('crm-email').value.trim(),
+            phase: document.getElementById('crm-phase').value,
+            notes: document.getElementById('crm-notes').value.trim()
+        }, btn, 'crm-create-result');
+        if (r) showResult('crm-create-result',
+            `<div class="label">Deal creado</div><div class="answer">ID: ${esc(r.data.id)}\nCliente: ${esc(r.data.client_name)}\nFase: ${esc(r.data.phase)}</div>`);
+    }
+
+    async function doListDeals() {
+        const phase = document.getElementById('crm-filter').value.trim();
+        const btn = document.querySelectorAll('#panel-crm .card:last-child .btn')[0];
+        const url = phase ? `/crm/deals?phase=${encodeURIComponent(phase)}` : '/crm/deals';
+        const r = await apiCall(url, 'GET', null, btn, 'crm-list-result');
+        if (r) {
+            const deals = Array.isArray(r.data) ? r.data : [];
+            if (!deals.length) {
+                showResult('crm-list-result', '<div class="answer">No hay deals</div>');
+            } else {
+                const rows = deals.map(d => `${esc(d.client_name)} | ${esc(d.phase)} | ${esc(d.notes || '-')}`).join('\n');
+                showResult('crm-list-result', `<div class="label">${deals.length} deals</div><div class="answer">${rows}</div>`);
+            }
+        }
+    }
+
+    async function doSearchDeals() {
+        const q = document.getElementById('crm-search').value.trim();
+        if (!q) return;
+        const btn = document.querySelectorAll('#panel-crm .card:last-child .btn')[1];
+        const r = await apiCall(`/crm/deals/search?q=${encodeURIComponent(q)}`, 'GET', null, btn, 'crm-list-result');
+        if (r) {
+            const deals = Array.isArray(r.data) ? r.data : [];
+            if (!deals.length) {
+                showResult('crm-list-result', '<div class="answer">Sin resultados</div>');
+            } else {
+                const rows = deals.map(d => `${esc(d.client_name)} | ${esc(d.phase)} | ${esc(d.notes || '-')}`).join('\n');
+                showResult('crm-list-result', `<div class="label">${deals.length} resultados</div><div class="answer">${rows}</div>`);
+            }
+        }
+    }
+
+    // Compare
+    async function loadModels() {
+        try {
+            const r = await fetch(API + '/models');
+            const d = await r.json();
+            const el = document.getElementById('cmp-models');
+            if (d.models && d.models.length) {
+                el.innerHTML = d.models.map(m => `<span class="tag">${esc(m)}</span>`).join(' ');
+            } else {
+                el.textContent = 'ninguno detectado';
+            }
+        } catch { }
+    }
+    loadModels();
+
+    async function doCompare() {
+        const msg = document.getElementById('cmp-msg').value.trim();
+        if (!msg) return;
+        const btn = document.querySelector('#panel-compare .btn');
+        setLoading(btn, true);
+        const start = Date.now();
+        try {
+            const res = await fetch(API + '/compare', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg, collection: document.getElementById('cmp-col').value })
+            });
+            const data = await res.json();
+            const total = ((Date.now() - start) / 1000).toFixed(1);
+            if (!res.ok) {
+                showResult('cmp-result', `<div class="answer" style="color:#ef4444;">${JSON.stringify(data)}</div>`);
+                return;
+            }
+            let html = `<div class="label">Comparacion completada (${total}s total)</div>`;
+            for (const r of data.results) {
+                html += `<div style="margin:1rem 0;padding:1rem;background:#1e293b;border-radius:8px;border:1px solid #334155;">`;
+                html += `<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">`;
+                html += `<span class="tag" style="background:#3b82f6;color:white;">${esc(r.model)}</span>`;
+                html += `<span style="font-size:0.75rem;color:#64748b;">${r.elapsed}s</span></div>`;
+                html += `<div class="answer">${esc(r.answer)}</div></div>`;
+            }
+            html += sourceTags(data.sources);
+            showResult('cmp-result', html);
+        } catch (e) {
+            showResult('cmp-result', `<div class="answer" style="color:#ef4444;">Error: ${e.message}</div>`);
+        } finally {
+            setLoading(btn, false);
+        }
+    }
+
+    // Health check
+    async function checkHealth() {
+        try {
+            const r = await fetch('/health');
+            const d = await r.json();
+            document.getElementById('status-dot').className = 'status-dot green';
+            document.getElementById('status-text').textContent = 'Conectado — API OK';
+        } catch {
+            document.getElementById('status-dot').className = 'status-dot red';
+            document.getElementById('status-text').textContent = 'Desconectado';
+        }
+        document.getElementById('status-time').textContent = new Date().toLocaleTimeString('es-ES');
+    }
+    checkHealth();
+    setInterval(checkHealth, 30000);
+
+    // Enter to send on chat
+    document.getElementById('chat-msg').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doChat(); }
+    });
+    </script>
+</body>
+</html>

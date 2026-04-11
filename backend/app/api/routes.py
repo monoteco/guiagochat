@@ -5,10 +5,12 @@ from app.models.schemas import (
     CRMDeal, CRMDealResponse, CRMPhaseUpdate,
     SimulateRequest, SimulateResponse,
     ClassifyRequest, ClassifyResponse,
+    CompareRequest, CompareResponse,
 )
 from app.services.rag_service import query_rag
 from app.services.crm_service import create_deal, update_phase, list_deals, search_deals
 from app.services.simulate_service import simulate_response, classify_business, classify_phase
+from app.services.compare_service import compare_models, list_available_models
 from app.ingestion.email_loader import ingest_emails
 from app.ingestion.document_loader import ingest_documents
 from app.ingestion.db_loader import ingest_db
@@ -62,6 +64,19 @@ def classify_business_endpoint(req: ClassifyRequest):
 def classify_phase_endpoint(req: ClassifyRequest):
     result = classify_phase(req.text)
     return ClassifyResponse(**result)
+
+
+# ---------- Comparar modelos ----------
+
+@router.post("/compare", response_model=CompareResponse)
+def compare_endpoint(req: CompareRequest):
+    result = compare_models(req.message, req.collection, req.models or None)
+    return CompareResponse(**result)
+
+
+@router.get("/models")
+def get_models():
+    return {"models": list_available_models()}
 
 
 # ---------- CRM ----------

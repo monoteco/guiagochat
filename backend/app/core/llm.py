@@ -1,15 +1,15 @@
 from langchain_ollama import ChatOllama
 from app.core.config import settings
 
-_llm = None
+_instances: dict[str, ChatOllama] = {}
 
 
-def get_llm() -> ChatOllama:
-    global _llm
-    if _llm is None:
-        _llm = ChatOllama(
+def get_llm(model: str | None = None) -> ChatOllama:
+    model = model or settings.ollama_model
+    if model not in _instances:
+        _instances[model] = ChatOllama(
             base_url=settings.ollama_base_url,
-            model=settings.ollama_model,
+            model=model,
             temperature=0.3,
         )
-    return _llm
+    return _instances[model]
