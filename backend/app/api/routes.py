@@ -8,6 +8,7 @@ from app.services.rag_service import query_rag
 from app.services.crm_service import create_deal, update_phase, list_deals, search_deals
 from app.ingestion.email_loader import ingest_emails
 from app.ingestion.document_loader import ingest_documents
+from app.ingestion.db_loader import ingest_db
 
 router = APIRouter()
 
@@ -27,6 +28,12 @@ def ingest_emails_endpoint(req: IngestRequest):
 @router.post("/ingest/documents", response_model=IngestResponse)
 def ingest_docs_endpoint(req: IngestRequest):
     count = ingest_documents(req.collection)
+    return IngestResponse(status="ok", documents_ingested=count)
+
+
+@router.post("/ingest/db", response_model=IngestResponse)
+def ingest_db_endpoint(req: IngestRequest):
+    count = ingest_db(req.collection or "emails")
     return IngestResponse(status="ok", documents_ingested=count)
 
 
