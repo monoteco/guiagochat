@@ -1,0 +1,49 @@
+﻿# GuiaGo Fine-tuning Configuration
+# Supports: llama31 (Meta-Llama-3.1-8B-Instruct) and mistral7b (Mistral-7B-Instruct-v0.3)
+
+models:
+  llama31:
+    repo_id: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    ollama_name: "llama31-guiago:8b-q4_K_M"
+    adapter_dir: "finetune/adapters/llama31"
+    merged_dir: "finetune/merged/llama31"
+    gguf_file: "finetune/gguf/llama31-guiago-q4_K_M.gguf"
+  mistral7b:
+    repo_id: "mistralai/Mistral-7B-Instruct-v0.3"
+    ollama_name: "mistral-guiago:7b-q4_K_M"
+    adapter_dir: "finetune/adapters/mistral7b"
+    merged_dir: "finetune/merged/mistral7b"
+    gguf_file: "finetune/gguf/mistral-guiago-q4_K_M.gguf"
+
+dataset:
+  db_path: "data/correosGo.db"
+  output_dir: "data/finetune"
+  train_file: "data/finetune/train.jsonl"
+  val_file: "data/finetune/val.jsonl"
+  val_split: 0.1
+  min_body_length: 50
+  max_body_length: 3000
+
+training:
+  lora_r: 8
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+    - "k_proj"
+    - "o_proj"
+  max_seq_length: 2048
+  num_epochs: 3
+  batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.03
+  lr_scheduler: "cosine"
+  save_steps: 50
+  logging_steps: 10
+
+system_prompt: |
+  Eres un asistente interno de GuiaGo, empresa de turismo y servicios.
+  Conoces el historial de correos, clientes y procesos de venta.
+  Responde siempre en español, de forma profesional y concisa.

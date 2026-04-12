@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+﻿from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
@@ -78,3 +78,38 @@ class ModelResult(BaseModel):
 class CompareResponse(BaseModel):
     results: list[ModelResult]
     sources: list[str] = []
+
+
+# ---------- Fine-tuning ----------
+
+class FinetuneDatasetResponse(BaseModel):
+    status: str
+    total: int = 0
+    train: int = 0
+    val: int = 0
+    log: str = ""
+
+
+class FinetuneTrainRequest(BaseModel):
+    model: str  # "llama31" or "mistral7b"
+
+
+class FinetuneTrainResponse(BaseModel):
+    job_id: str
+    pid: int
+    status: str
+    log_path: str = ""
+
+
+class FinetuneJobStatus(BaseModel):
+    job_id: str
+    model: str
+    pid: int = 0
+    status: str
+    started_at: str = ""
+    log_tail: str = ""
+    running: bool = False
+
+
+class FinetuneExportRequest(BaseModel):
+    model: str

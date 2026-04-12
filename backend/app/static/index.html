@@ -65,6 +65,7 @@
             <div class="tab" data-tab="ingest">Ingesta</div>
             <div class="tab" data-tab="compare">Comparar modelos</div>
             <div class="tab" data-tab="crm">CRM</div>
+            <div class="tab" data-tab="finetune">Fine-tuning</div>
         </div>
 
         <!-- CHAT -->
@@ -187,6 +188,55 @@
                     <input id="crm-search" placeholder="Ej: Miramar">
                     <button class="btn btn-primary" onclick="doSearchDeals()">Buscar</button>
                     <div id="crm-list-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINE-TUNING -->
+        <div id="panel-finetune" class="panel">
+            <div class="card">
+                <h2>Fine-tuning de modelos GuiaGo</h2>
+                <p class="desc">Genera dataset desde correosGo.db, entrena LoRA y exporta a Ollama.</p>
+
+                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1rem;">
+                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Paso 1 &amp;mdash; Generar dataset</h3>
+                    <p style="font-size:0.875rem;color:#64748b;margin:0 0 0.75rem;">Extrae pares de instruccion/respuesta desde correosGo.db.</p>
+                    <button class="btn btn-primary" id="ft-dataset-btn" onclick="doFtDataset()">Generar dataset</button>
+                    <div id="ft-dataset-result" class="result"></div>
+                </div>
+
+                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1rem;">
+                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Paso 2 &amp;mdash; Entrenar modelo</h3>
+                    <p style="font-size:0.875rem;color:#64748b;margin:0 0 0.75rem;">Descarga modelo base HuggingFace y aplica LoRA. Puede tardar horas o dias en CPU.</p>
+                    <label for="ft-model-train">Modelo base</label>
+                    <select id="ft-model-train">
+                        <option value="mistral7b">Mistral 7B (recomendado)</option>
+                        <option value="llama31">Llama 3.1 8B (requiere HF token)</option>
+                    </select>
+                    <button class="btn btn-primary" id="ft-train-btn" onclick="doFtTrain()" style="margin-top:0.5rem;">Iniciar entrenamiento</button>
+                    <div id="ft-train-result" class="result"></div>
+                </div>
+
+                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1rem;">
+                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Estado de jobs</h3>
+                    <button class="btn" id="ft-jobs-btn" onclick="doFtJobs()" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;margin-bottom:0.5rem;">Refrescar lista</button>
+                    <div id="ft-jobs-result" class="result"></div>
+                    <label for="ft-job-id" style="margin-top:0.75rem;">Job ID para ver log</label>
+                    <input id="ft-job-id" placeholder="Ej: mistral7b_1700000000">
+                    <button class="btn" onclick="doFtStatus()" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;margin-top:0.25rem;">Ver estado</button>
+                    <div id="ft-status-result" class="result"></div>
+                </div>
+
+                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;">
+                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Paso 3 &amp;mdash; Exportar a Ollama</h3>
+                    <p style="font-size:0.875rem;color:#64748b;margin:0 0 0.75rem;">Fusiona LoRA, convierte a GGUF Q4_K_M y registra en Ollama.</p>
+                    <label for="ft-model-export">Modelo</label>
+                    <select id="ft-model-export">
+                        <option value="mistral7b">Mistral 7B</option>
+                        <option value="llama31">Llama 3.1 8B</option>
+                    </select>
+                    <button class="btn btn-primary" id="ft-export-btn" onclick="doFtExport()" style="margin-top:0.5rem;">Exportar a Ollama</button>
+                    <div id="ft-export-result" class="result"></div>
                 </div>
             </div>
         </div>
@@ -427,6 +477,70 @@
     document.getElementById('chat-msg').addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doChat(); }
     });
+
+    // Fine-tuning
+    async function doFtDataset() {
+        const btn = document.getElementById('ft-dataset-btn');
+        const r = await apiCall('/finetune/dataset', 'POST', {}, btn, 'ft-dataset-result');
+        if (r) showResult('ft-dataset-result',
+            '<div class="label">Dataset generado</div><div class="answer">Total: ' + r.data.total + ' pares | Train: ' + r.data.train + ' | Val: ' + r.data.val + '</div>');
+    }
+
+    async function doFtTrain() {
+        const model = document.getElementById('ft-model-train').value;
+        const btn = document.getElementById('ft-train-btn');
+        const r = await apiCall('/finetune/train', 'POST', { model }, btn, 'ft-train-result');
+        if (r) {
+            document.getElementById('ft-job-id').value = r.data.job_id;
+            showResult('ft-train-result',
+                '<div class="label">Entrenamiento iniciado</div><div class="answer">Job ID: ' + esc(r.data.job_id) + '<br>PID: ' + r.data.pid + '<br>Corre en background. Usa Job ID para monitorear.</div>');
+        }
+    }
+
+    async function doFtJobs() {
+        const btn = document.getElementById('ft-jobs-btn');
+        setLoading(btn, true);
+        try {
+            const res = await fetch(API + '/finetune/jobs');
+            const data = await res.json();
+            if (!res.ok) { showResult('ft-jobs-result', '<div class="answer" style="color:#ef4444;">' + JSON.stringify(data) + '</div>'); return; }
+            if (!data.length) { showResult('ft-jobs-result', '<div class="answer">No hay jobs registrados</div>'); return; }
+            let html = '<div class="label">Jobs de fine-tuning</div>';
+            for (const j of data) {
+                const color = j.status === 'completed' ? '#22c55e' : j.status === 'running' ? '#f59e0b' : '#ef4444';
+                html += '<div style="margin:0.5rem 0;padding:0.5rem;background:#1e293b;border-radius:6px;">';
+                html += '<span class="tag" style="background:' + color + ';color:white;">' + esc(j.status) + '</span> ';
+                html += '<strong>' + esc(j.job_id) + '</strong> (' + esc(j.model) + ') &mdash; ' + esc(j.started_at || '') + '</div>';
+            }
+            showResult('ft-jobs-result', html);
+        } catch (e) {
+            showResult('ft-jobs-result', '<div class="answer" style="color:#ef4444;">Error: ' + e.message + '</div>');
+        } finally { setLoading(btn, false); }
+    }
+
+    async function doFtStatus() {
+        const job_id = document.getElementById('ft-job-id').value.trim();
+        if (!job_id) return;
+        try {
+            const res = await fetch(API + '/finetune/jobs/' + encodeURIComponent(job_id));
+            const d = await res.json();
+            const color = d.status === 'completed' ? '#22c55e' : d.status === 'running' ? '#f59e0b' : '#ef4444';
+            showResult('ft-status-result',
+                '<div class="label">Job: ' + esc(job_id) + '</div>' +
+                '<span class="tag" style="background:' + color + ';color:white;">' + esc(d.status) + '</span>' +
+                '<div class="answer" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;font-size:0.75rem;margin-top:0.5rem;">' + esc(d.log_tail || '(sin log aun)') + '</div>');
+        } catch (e) {
+            showResult('ft-status-result', '<div class="answer" style="color:#ef4444;">Error: ' + e.message + '</div>');
+        }
+    }
+
+    async function doFtExport() {
+        const model = document.getElementById('ft-model-export').value;
+        const btn = document.getElementById('ft-export-btn');
+        const r = await apiCall('/finetune/export', 'POST', { model }, btn, 'ft-export-result');
+        if (r) showResult('ft-export-result',
+            '<div class="label">Exportacion iniciada</div><div class="answer">Job ID: ' + esc(r.data.job_id) + '<br>Convierte LoRA a GGUF Q4_K_M y lo registra en Ollama.</div>');
+    }
     </script>
 </body>
 </html>
