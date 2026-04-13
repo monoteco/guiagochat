@@ -50,12 +50,12 @@ def build_message(system: str, user: str, assistant: str) -> dict:
 
 def generate_summary_pairs(conn, system_prompt: str, min_len: int, max_len: int) -> list:
     rows = conn.execute(
-        "SELECT asunto, cuerpo, resumen_ia FROM correos "
+        "SELECT asunto, cuerpo_txt, resumen_ia FROM correos "
         "WHERE resumen_ia IS NOT NULL AND resumen_ia != '' "
-        "  AND cuerpo IS NOT NULL AND cuerpo != ''",
+        "  AND cuerpo_txt IS NOT NULL AND cuerpo_txt != ''",
     ).fetchall()
     pairs = []
-    for asunto, cuerpo, resumen_ia in rows:
+    for asunto, cuerpo_txt, resumen_ia in rows:
         body = truncate(cuerpo, max_len)
         if len(body) < min_len:
             continue
@@ -70,12 +70,12 @@ def generate_summary_pairs(conn, system_prompt: str, min_len: int, max_len: int)
 
 def generate_phase_pairs(conn, system_prompt: str, min_len: int, max_len: int) -> list:
     rows = conn.execute(
-        "SELECT asunto, cuerpo, fase_ia FROM correos "
+        "SELECT asunto, cuerpo_txt, fase_ia FROM correos "
         "WHERE fase_ia IS NOT NULL AND fase_ia != '' "
-        "  AND cuerpo IS NOT NULL AND cuerpo != ''",
+        "  AND cuerpo_txt IS NOT NULL AND cuerpo_txt != ''",
     ).fetchall()
     pairs = []
-    for asunto, cuerpo, fase_ia in rows:
+    for asunto, cuerpo_txt, fase_ia in rows:
         body = truncate(cuerpo, max_len)
         if len(body) < min_len:
             continue
@@ -91,24 +91,24 @@ def generate_phase_pairs(conn, system_prompt: str, min_len: int, max_len: int) -
 
 def generate_reply_pairs(conn, system_prompt: str, min_len: int, max_len: int) -> list:
     inbox = conn.execute(
-        "SELECT id, asunto, de, cuerpo, fecha FROM correos "
+        "SELECT id, asunto, de, cuerpo_txt, fecha FROM correos "
         "WHERE carpeta IN ('INBOX', 'Inbox', 'inbox') "
-        "  AND cuerpo IS NOT NULL AND cuerpo != ''",
+        "  AND cuerpo_txt IS NOT NULL AND cuerpo_txt != ''",
     ).fetchall()
     sent_rows = conn.execute(
-        "SELECT asunto, cuerpo FROM correos "
+        "SELECT asunto, cuerpo_txt FROM correos "
         "WHERE carpeta IN ('Sent', 'Enviados', 'Sent Items', '[Gmail]/Sent Mail') "
-        "  AND cuerpo IS NOT NULL AND cuerpo != ''",
+        "  AND cuerpo_txt IS NOT NULL AND cuerpo_txt != ''",
     ).fetchall()
 
     sent_by_subject: dict[str, list[str]] = {}
-    for s_asunto, s_cuerpo in sent_rows:
+    for s_asunto, s_cuerpo_txt in sent_rows:
         key = normalize_subject(s_asunto)
         if key:
-            sent_by_subject.setdefault(key, []).append(s_cuerpo)
+            sent_by_subject.setdefault(key, []).append(s_cuerpo_txt)
 
     pairs = []
-    for _, asunto, de, cuerpo, fecha in inbox:
+    for _, asunto, de, cuerpo_txt, fecha in inbox:
         key = normalize_subject(asunto)
         if not key or key not in sent_by_subject:
             continue
