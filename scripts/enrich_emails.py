@@ -3,8 +3,8 @@
 enrich_emails.py - Populate resumen_ia and fase_ia in correosGo.db
 using the local Ollama LLM (mistral-nemo).
 
+Single LLM call per email (JSON response with resumen + fase).
 Processes INBOX emails in batches, resumable (skips already processed).
-Logs progress to stdout (redirect to logs/enrich.log when launching).
 
 Usage:
   cd ~/guiagochat && source venv/bin/activate
@@ -41,36 +41,33 @@ log = logging.getLogger(__name__)
 
 # ── llm helpers ──────────────────────────────────────────────────────────────
 
-def ask_ollama(prompt: str, max_tokens: int = 200) -> str:
+def ask_ollama_json(asunto: str, cuerpo: str) -> dict:
+    """Single LLM call returning both resumen and fase as JSON."""
+    prompt = (
+        "Analiza este correo de negocio y responde SOLO con JSON valido, sin texto extra.\n"
+        "Formato exacto: {\"resumen\": \"...\", \"fase\": \"...\"}\n"
+        f"Fases validas: {PHASES_STR}\n\n"
+        f"Asunto: {asunto}\n\n{cuerpo[:MAX_BODY_CHARS]}"
+    )
     payload = {
         "model": MODEL,
         "messages": [{"role": "user", "content": prompt}],
-        "options": {"num_predict": max_tokens, "temperature": 0.2},
+        "options": {"num_predict": 200, "temperature": 0.2},
         "stream": False,
     }
     try:
         resp = requests.post(OLLAMA_URL, json=payload, timeout=180)
         resp.raise_for_status()
-        return resp.json()["message"]["content"].strip()
+        raw = resp.json()["message"]["content"].strip()
+        # Extract JSON even if model adds surrounding text
+        start = raw.find("{")
+        end   = raw.rfind("}") + 1
+        if start >= 0 and end > start:
+            return json.loads(raw[start:end])
+        return {}
     except Exception as e:
         log.warning("Ollama error: %s", e)
-        return ""
-
-
-def make_resumen_prompt(asunto: str, cuerpo: str) -> str:
-    return (
-        "Resume en 1-2 frases en espanol este correo de negocio. "
-        "Solo el resumen, sin introduccion:\n\n"
-        f"Asunto: {asunto}\n\n{cuerpo[:MAX_BODY_CHARS]}"
-    )
-
-
-def make_fase_prompt(asunto: str, cuerpo: str) -> str:
-    return (
-        "Clasifica la fase comercial de GuiaGo de este correo. "
-        f"Responde SOLO con una de estas palabras: {PHASES_STR}\n\n"
-        f"Asunto: {asunto}\n\n{cuerpo[:MAX_BODY_CHARS]}"
-    )
+        return {}
 
 
 def normalize_fase(raw: str) -> str:
@@ -127,13 +124,12 @@ def main():
 
             log.info("[%d/%d] id=%d  asunto=%.60s", processed + 1, pending, rid, asunto)
 
-            resumen = ask_ollama(make_resumen_prompt(asunto, cuerpo), max_tokens=150)
-            if not resumen:
-                resumen = "(sin resumen)"
-                errors += 1
+            result  = ask_ollama_json(asunto, cuerpo)
+            resumen = result.get("resumen", "").strip() or "(sin resumen)"
+            fase    = normalize_fase(result.get("fase", ""))
 
-            fase_raw = ask_ollama(make_fase_prompt(asunto, cuerpo), max_tokens=10)
-            fase     = normalize_fase(fase_raw)
+            if not result:
+                errors += 1
 
             conn.execute(
                 "UPDATE correos SET resumen_ia=?, fase_ia=? WHERE id=?",
