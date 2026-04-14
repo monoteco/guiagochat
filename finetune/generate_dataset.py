@@ -56,7 +56,7 @@ def generate_summary_pairs(conn, system_prompt: str, min_len: int, max_len: int)
     ).fetchall()
     pairs = []
     for asunto, cuerpo_txt, resumen_ia in rows:
-        body = truncate(cuerpo, max_len)
+        body = truncate(cuerpo_txt, max_len)
         if len(body) < min_len:
             continue
         user_msg = f"Asunto: {asunto or '(sin asunto)'}\n\n{body}"
@@ -76,7 +76,7 @@ def generate_phase_pairs(conn, system_prompt: str, min_len: int, max_len: int) -
     ).fetchall()
     pairs = []
     for asunto, cuerpo_txt, fase_ia in rows:
-        body = truncate(cuerpo, max_len)
+        body = truncate(cuerpo_txt, max_len)
         if len(body) < min_len:
             continue
         user_msg = f"Asunto: {asunto or '(sin asunto)'}\n\n{body}"
@@ -92,12 +92,12 @@ def generate_phase_pairs(conn, system_prompt: str, min_len: int, max_len: int) -
 def generate_reply_pairs(conn, system_prompt: str, min_len: int, max_len: int) -> list:
     inbox = conn.execute(
         "SELECT id, asunto, de, cuerpo_txt, fecha FROM correos "
-        "WHERE carpeta IN ('INBOX', 'Inbox', 'inbox') "
+        "WHERE mailbox IN ('INBOX', 'Inbox', 'inbox') "
         "  AND cuerpo_txt IS NOT NULL AND cuerpo_txt != ''",
     ).fetchall()
     sent_rows = conn.execute(
         "SELECT asunto, cuerpo_txt FROM correos "
-        "WHERE carpeta IN ('Sent', 'Enviados', 'Sent Items', '[Gmail]/Sent Mail') "
+        "WHERE mailbox IN ('Sent', 'Enviados', 'Sent Items', '[Gmail]/Sent Mail') "
         "  AND cuerpo_txt IS NOT NULL AND cuerpo_txt != ''",
     ).fetchall()
 
@@ -112,7 +112,7 @@ def generate_reply_pairs(conn, system_prompt: str, min_len: int, max_len: int) -
         key = normalize_subject(asunto)
         if not key or key not in sent_by_subject:
             continue
-        body = truncate(cuerpo, max_len)
+        body = truncate(cuerpo_txt, max_len)
         if len(body) < min_len:
             continue
         # Use first matching sent reply
