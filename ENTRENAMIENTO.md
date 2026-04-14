@@ -166,3 +166,6 @@ tail -f ~/guiagochat/logs/api.log
 - [ ] Frontend web
 - [ ] Probar modelos adicionales (Mistral, Gemma 2)
 - [ ] Evaluar calidad de respuestas y ajustar chunks/overlap
+
+## Cambios (2026-04-14)
+- **Modelo actual**: mistral-nemo (7.1GB, 12B params, Spanish-optimized)
