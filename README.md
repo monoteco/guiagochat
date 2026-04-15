@@ -1,196 +1,274 @@
 # GuiaGo Chat - Asistente IA Interno
 
 Backend de IA para uso interno de GuiaGo.
-Combina RAG sobre datos propios, utilidades de CRM, simulacion/clasificacion de correos y jobs de fine-tuning.
+Combina RAG sobre datos propios, CRM, clasificacion de correos y pipeline de fine-tuning.
+
+---
+
+## Estado operativo (actualizado 2026-04-15)
+
+| Componente | Estado | Detalle |
+|---|---|---|
+| API FastAPI | OK | Puerto 8080, `start.sh` |
+| Ollama (LLM) | OK | `mistral-nemo` activo |
+| ChromaDB (RAG) | OK | 3496 correos indexados |
+| Enriquecimiento BD | EN CURSO | ~1699/2527 emails procesados (~67%) |
+| Fine-tuning | PENDIENTE | Esperando datos de `resumen_ia`/`fase_ia` |
+
+---
 
 ## Que hace este proyecto
 
-- Chat con contexto (RAG) usando ChromaDB + Ollama.
-- Ingesta de datos desde:
-  - correos `.eml`
-  - documentos `.txt`
-  - base SQLite `correosGo.db`
-- CRM liviano para crear deals, mover fases y buscar por similitud.
-- Simulacion de respuestas comerciales con estilo interno.
-- Clasificacion de tipo de negocio y fase comercial.
-- Comparacion de respuestas entre modelos disponibles en Ollama.
-- Pipeline de fine-tuning (generar dataset, entrenar, exportar) ejecutado como jobs en background.
+- **Chat RAG**: responde preguntas sobre correos, clientes y documentos internos
+- **Ingesta de datos** desde correos `.eml`, documentos `.txt` y BD SQLite
+- **CRM liviano**: deals, fases comerciales y busqueda semantica
+- **Simulacion**: genera borradores de respuesta al estilo GuiaGo
+- **Clasificacion**: tipo de negocio y fase del embudo comercial
+- **Comparacion de modelos**: evalua respuestas entre los LLM disponibles
+- **Fine-tuning pipeline**: generar dataset, entrenar y exportar modelo propio
 
-## Integraciones externas
+---
 
-### Telegram
+## Infra — miniPC "caro"
 
-No existe integracion con Telegram en este repositorio.
+| Parametro | Valor |
+|---|---|
+| Host | `caro@100.103.98.125` (Tailscale) |
+| Hardware | Intel Core i9-9880H, 64 GB RAM, 2 TB SSD |
+| OS | Debian 13 (sin GPU) |
+| SSH | Key-based (sin contrasena) |
+| Python | 3.13, venv en `~/guiagochat/venv/` |
+| Ollama | Nativo (no Docker) |
+| API | FastAPI en `0.0.0.0:8080` |
+| ChromaDB | `~/guiagochat/chroma_db/` (47 MB, 3496 docs) |
+| llama.cpp | Compilado en `~/llama.cpp/build/bin/` |
 
-Se revisaron patrones de codigo y no hay referencias a:
-- `telegram`
-- `api.telegram.org`
-- `chat_id`
-- `sendMessage`
-- `-1003897327460`
+---
 
-Si necesitas enviar mensajes a Telegram, hoy tendria que implementarse desde cero.
+## Modelos LLM disponibles
 
-## Stack
+| Modelo | Tamano | Parametros | Calidad espanol | RAM uso | Velocidad (CPU) |
+|---|---|---|---|---|---|
+| **mistral-nemo** (ACTIVO) | 7.1 GB | 12B | Excelente | ~9 GB | ~18 seg/resp |
+| mistral:7b-instruct-q4_K_M | 4.4 GB | 7B | Muy buena | ~6 GB | ~12 seg/resp |
+| llama3.1:8b-instruct-q4_K_M | 4.9 GB | 8B | Buena | ~7 GB | ~15 seg/resp |
 
-- FastAPI
-- LangChain
-- Ollama
-- ChromaDB
-- Pydantic
-- Docker Compose
+Para cambiar de modelo: editar `OLLAMA_MODEL` en `~/guiagochat/.env` y reiniciar con `start.sh`.
+
+---
+
+## Fases del embudo comercial
+
+```
+lead → contactado → propuesta → negociacion → cerrado → produccion → finalizado
+```
+
+Estas fases se usan en:
+- `fase_ia` en `correosGo.db` (generado por el script de enriquecimiento)
+- Endpoint `POST /api/v1/classify/phase`
+- CRM: `PATCH /api/v1/crm/deals/{deal_id}/phase`
+
+---
+
+## Datos ingestados
+
+| Fuente | Registros | Estado | Coleccion ChromaDB |
+|---|---|---|---|
+| `correosGo.db` (correos) | 3496 | Indexado | `emails` |
+| `BDClientes.db` | 56 | Pendiente loader | - |
+| `BDPreclientes.db` | 166 | Pendiente loader | - |
+| `data/documents/` (.txt) | 0 | Vacio | `general` |
+| `data/emails/` (.eml) | 0 | Vacio | `emails` |
+
+### Schema de `correosGo.db`
+
+```sql
+CREATE TABLE correos (
+    id         INTEGER PRIMARY KEY,
+    mailbox    TEXT,   -- INBOX, inbox, INBOX/Sent, Elementos enviados, ...
+    de         TEXT,
+    para       TEXT,
+    cc         TEXT,
+    asunto     TEXT,
+    fecha      TEXT,
+    cuerpo_txt TEXT,
+    account    TEXT,
+    resumen_ia TEXT,   -- generado por scripts/enrich_emails.py
+    fase_ia    TEXT    -- generado por scripts/enrich_emails.py
+);
+```
+
+---
+
+## Pipeline de enriquecimiento y fine-tuning
+
+```
+correosGo.db (cuerpo_txt)
+        |
+        v
+scripts/enrich_emails.py   ← EN CURSO (mistral-nemo genera resumen_ia + fase_ia)
+        |
+        v
+correosGo.db (resumen_ia + fase_ia poblados)
+        |
+        v
+finetune/generate_dataset.py  ← genera train.jsonl + val.jsonl
+        |
+        v
+finetune/train.py             ← fine-tuning con LoRA/QLoRA
+        |
+        v
+finetune/export_to_ollama.py  ← exporta modelo entrenado a Ollama
+```
+
+### Estado actual del enriquecimiento (15 abr 2026)
+
+```bash
+# Ver progreso en tiempo real
+ssh caro@100.103.98.125 'tail -5 ~/guiagochat/logs/enrich.log'
+```
+
+- Procesados: ~1699 / 2527 (67%)
+- Velocidad: ~18 seg/email (una sola llamada LLM)
+- Finalizacion estimada: hoy ~14:15
+
+---
 
 ## Estructura del repo
 
-```text
+```
 guiagochat/
-|-- backend/
-|   |-- Dockerfile
-|   |-- requirements.txt
-|   `-- app/
-|       |-- main.py                # App FastAPI, /health y static index
-|       |-- api/
-|       |   `-- routes.py          # Endpoints /api/v1/*
-|       |-- core/
-|       |   |-- config.py          # Settings y .env
-|       |   |-- llm.py             # Cliente LLM (Ollama)
-|       |   `-- vectorstore.py     # Chroma collections
-|       |-- ingestion/
-|       |   |-- email_loader.py    # Ingesta de .eml
-|       |   |-- document_loader.py # Ingesta de .txt con chunking
-|       |   `-- db_loader.py       # Ingesta de correosGo.db
-|       |-- models/
-|       |   `-- schemas.py         # Modelos request/response
-|       |-- services/
-|       |   |-- rag_service.py
-|       |   |-- crm_service.py
-|       |   |-- simulate_service.py
-|       |   |-- compare_service.py
-|       |   `-- finetune_service.py
-|       `-- static/
-|           `-- index.html
-|-- data/
-|   |-- documents/
-|   `-- emails/
-|-- finetune/
-|   |-- config.yaml
-|   |-- generate_dataset.py
-|   |-- train.py
-|   `-- export_to_ollama.py
-|-- logs/
-|-- docker-compose.yml
-|-- start.sh
-`-- README.md
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── app/
+│       ├── main.py                  # App FastAPI, /health y static
+│       ├── api/
+│       │   └── routes.py            # Todos los endpoints /api/v1/*
+│       ├── core/
+│       │   ├── config.py            # Settings (.env via pydantic)
+│       │   ├── llm.py               # Cliente Ollama
+│       │   └── vectorstore.py       # ChromaDB collections
+│       ├── ingestion/
+│       │   ├── email_loader.py      # Ingesta .eml
+│       │   ├── document_loader.py   # Ingesta .txt con chunking
+│       │   └── db_loader.py         # Ingesta correosGo.db
+│       ├── models/
+│       │   └── schemas.py           # Pydantic request/response
+│       ├── services/
+│       │   ├── rag_service.py       # Chat RAG
+│       │   ├── crm_service.py       # Deals y fases
+│       │   ├── simulate_service.py  # Borradores de respuesta
+│       │   ├── compare_service.py   # Comparar modelos
+│       │   └── finetune_service.py  # Jobs de fine-tuning
+│       └── static/
+│           └── index.html
+├── data/
+│   ├── documents/                   # .txt para ingestar
+│   └── emails/                      # .eml para ingestar
+├── finetune/
+│   ├── config.yaml                  # Config del pipeline
+│   ├── generate_dataset.py          # Genera train.jsonl / val.jsonl
+│   ├── train.py                     # Fine-tuning LoRA
+│   └── export_to_ollama.py          # Exporta modelo a Ollama
+├── scripts/
+│   └── enrich_emails.py             # Pobla resumen_ia y fase_ia en BD
+├── logs/                            # api.log, enrich.log, train.log
+├── docker-compose.yml
+├── start.sh                         # Arranque Ollama + FastAPI
+└── README.md
 ```
 
-## Flujo funcional
-
-1. Se ingesta informacion en una coleccion de Chroma.
-2. En una consulta, se recuperan chunks relevantes por similitud.
-3. El contexto recuperado se pasa al modelo en Ollama.
-4. Se devuelve respuesta + fuentes.
-
-En paralelo, el modulo CRM guarda deals en otra coleccion y permite operar fases del pipeline comercial.
+---
 
 ## Endpoints principales
 
-Base API: `/api/v1`
+Base: `http://caro:8080/api/v1`
 
-- `POST /chat`
-- `POST /ingest/documents`
-- `POST /ingest/emails`
-- `POST /ingest/db`
-- `POST /simulate/response`
-- `POST /classify/business`
-- `POST /classify/phase`
-- `POST /compare`
-- `GET /models`
-- `POST /crm/deals`
-- `PATCH /crm/deals/{deal_id}/phase`
-- `GET /crm/deals`
-- `GET /crm/deals/search?q=...`
-- `POST /finetune/dataset`
-- `POST /finetune/train`
-- `GET /finetune/jobs`
-- `GET /finetune/jobs/{job_id}`
-- `POST /finetune/export`
+| Metodo | Endpoint | Funcion |
+|---|---|---|
+| POST | `/chat` | Chat RAG sobre una coleccion |
+| POST | `/ingest/documents` | Ingestar .txt de data/documents |
+| POST | `/ingest/emails` | Ingestar .eml de data/emails |
+| POST | `/ingest/db` | Ingestar correosGo.db |
+| POST | `/simulate/response` | Borrador de respuesta comercial |
+| POST | `/classify/business` | Tipo de negocio del correo |
+| POST | `/classify/phase` | Fase del embudo comercial |
+| POST | `/compare` | Comparar respuesta entre modelos |
+| GET | `/models` | Listar modelos Ollama disponibles |
+| POST | `/crm/deals` | Crear deal |
+| PATCH | `/crm/deals/{id}/phase` | Mover fase |
+| GET | `/crm/deals` | Listar deals |
+| GET | `/crm/deals/search?q=` | Buscar por similitud |
+| POST | `/finetune/dataset` | Generar dataset JSONL |
+| POST | `/finetune/train` | Lanzar job de training |
+| GET | `/finetune/jobs` | Listar jobs |
+| GET | `/finetune/jobs/{id}` | Estado de un job |
+| POST | `/finetune/export` | Exportar modelo entrenado |
+| GET | `/health` | Health check |
 
-Adicional:
-- `GET /health`
-- `GET /` (sirve `backend/app/static/index.html`)
+---
 
-## Setup rapido (Docker)
+## Operacion diaria
+
+### Arrancar (si caro se reinicia)
+
+```bash
+ssh caro@100.103.98.125 'bash ~/guiagochat/start.sh'
+```
+
+### Probar RAG
+
+```bash
+curl -s -X POST http://caro:8080/api/v1/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "quien envia mas correos?", "collection": "emails"}'
+```
+
+### Ver logs
+
+```bash
+ssh caro@100.103.98.125 'tail -f ~/guiagochat/logs/api.log'
+ssh caro@100.103.98.125 'tail -f ~/guiagochat/logs/enrich.log'
+```
+
+### Monitorear enriquecimiento
+
+```bash
+ssh caro@100.103.98.125 'grep "checkpoint" ~/guiagochat/logs/enrich.log | tail -3'
+```
+
+---
+
+## Setup desde cero (Docker)
 
 ```bash
 git clone https://github.com/monoteco/guiagochat.git
 cd guiagochat
-cp .env.example .env
+cp .env.example .env      # editar con rutas y modelo
 docker compose up -d
-```
-
-Descargar modelo (primera vez):
-
-```bash
-docker exec guiagochat-ollama ollama pull llama3.1:8b-instruct-q4_K_M
-```
-
-Verificar:
-
-```bash
+docker exec guiagochat-ollama ollama pull mistral-nemo
 curl http://localhost:8000/health
 ```
 
-## Ejecucion local con start.sh
+---
 
-`start.sh` esta pensado para Linux (miniPC). Hace:
+## Proximos pasos
 
-- levanta Ollama si no esta corriendo
-- activa venv
-- arranca FastAPI en un puerto libre empezando por `8080`
-- valida `/health`
+| Prioridad | Tarea | Estado |
+|---|---|---|
+| 1 | Terminar enriquecimiento BD (`resumen_ia`/`fase_ia`) | EN CURSO — hoy ~14:15 |
+| 2 | Ejecutar `generate_dataset.py` y validar pares | PENDIENTE |
+| 3 | Lanzar fine-tuning con `train.py` | PENDIENTE |
+| 4 | Loaders para BDClientes.db y BDPreclientes.db | PENDIENTE |
+| 5 | Systemd service para auto-start al boot | PENDIENTE |
+| 6 | Cron de re-ingesta periodica de correos nuevos | PENDIENTE |
+| 7 | Frontend web mejorado | PENDIENTE |
 
-Uso:
+---
 
-```bash
-bash ~/guiagochat/start.sh
-```
+## Integraciones externas
 
-## Ingesta de datos
+### Telegram: NO existe
 
-Documentos `.txt` en `data/documents`:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/ingest/documents \
-  -H 'Content-Type: application/json' \
-  -d '{"collection":"general"}'
-```
-
-Correos `.eml` en `data/emails`:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/ingest/emails \
-  -H 'Content-Type: application/json' \
-  -d '{"collection":"emails"}'
-```
-
-Base SQLite `data/correosGo.db`:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/ingest/db \
-  -H 'Content-Type: application/json' \
-  -d '{"collection":"emails"}'
-```
-
-## CRM phases
-
-`lead -> contactado -> propuesta -> negociacion -> cerrado -> produccion -> finalizado`
-
-## Notas operativas
-
-- `docker-compose.yml` publica la API en `8000`.
-- `start.sh` arranca por defecto desde `8080` (o siguiente libre).
-- `finetune_service.py` guarda jobs en `data/finetune/jobs.json` y logs en `logs/`.
-
-## Documento complementario
-
-Para detalles de entrenamiento/modelos y estado operativo, ver `ENTRENAMIENTO.md`.
+Busqueda exhaustiva confirma cero referencias a `telegram`, `chat_id`, `sendMessage` o `-1003897327460` en este repositorio. Si se necesita en el futuro, debe implementarse desde cero.
