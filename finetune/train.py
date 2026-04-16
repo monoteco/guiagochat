@@ -1,4 +1,4 @@
-﻿"""
+"""
 train.py — LoRA fine-tuning for Llama 3.1 8B or Mistral 7B (CPU-only).
 
 Downloads base model from HuggingFace (requires HUGGINGFACE_TOKEN in .env for Llama 3.1),
@@ -151,7 +151,7 @@ def main():
         lr_scheduler_type=train_cfg["lr_scheduler"],
         save_steps=int(train_cfg["save_steps"]),
         logging_steps=int(train_cfg["logging_steps"]),
-        max_seq_length=int(train_cfg["max_seq_length"]),
+        max_length=int(train_cfg["max_seq_length"]),
         fp16=False,
         bf16=False,
         use_cpu=True,
