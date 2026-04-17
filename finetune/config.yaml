@@ -1,4 +1,4 @@
-﻿# GuiaGo Fine-tuning Configuration
+# GuiaGo Fine-tuning Configuration
 # Supports: llama31 (Meta-Llama-3.1-8B-Instruct) and mistral7b (Mistral-7B-Instruct-v0.3)
 
 models:
@@ -34,9 +34,9 @@ training:
     - "k_proj"
     - "o_proj"
   max_seq_length: 2048
-  num_epochs: 3
+  num_epochs: 1
   batch_size: 1
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 4
   learning_rate: 2.0e-4
   warmup_ratio: 0.03
   lr_scheduler: "cosine"
