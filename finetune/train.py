@@ -80,6 +80,12 @@ def main():
 
     adapter_dir.mkdir(parents=True, exist_ok=True)
 
+    # ---- GPU / CPU detection ----
+    use_gpu = torch.cuda.is_available()
+    device_map = "auto" if use_gpu else "cpu"
+    dtype = torch.bfloat16 if use_gpu else torch.float32
+    print(f"Device: {'GPU' if use_gpu else 'CPU'} | dtype: {dtype}")
+
     # ---- Load tokenizer ----
     print("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(
@@ -95,8 +101,8 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         repo_id,
         token=hf_token or None,
-        torch_dtype=torch.float32,
-        device_map="cpu",
+        torch_dtype=dtype,
+        device_map=device_map,
         trust_remote_code=True,
     )
     model.enable_input_require_grads()
@@ -151,10 +157,10 @@ def main():
         lr_scheduler_type=train_cfg["lr_scheduler"],
         save_steps=int(train_cfg["save_steps"]),
         logging_steps=int(train_cfg["logging_steps"]),
-        max_length=int(train_cfg["max_seq_length"]),
+        max_seq_length=int(train_cfg["max_seq_length"]),
         fp16=False,
-        bf16=False,
-        use_cpu=True,
+        bf16=use_gpu,
+        use_cpu=not use_gpu,
         dataset_text_field="text",
         report_to="none",
         eval_strategy="steps" if val_file.exists() else "no",
