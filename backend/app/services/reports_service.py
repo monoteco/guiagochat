@@ -144,7 +144,7 @@ _REPORT_PROMPTS = {
 }
 
 
-def _fetch_context(report_type: str, n_results: int = 8) -> tuple[str, list[str]]:
+def _fetch_context(report_type: str, n_results: int = 3) -> tuple[str, list[str]]:
     """Recupera contexto de ChromaDB para el tipo de informe."""
     collection = get_or_create_collection("emails")
     queries = _REPORT_QUERIES[report_type]
@@ -161,7 +161,9 @@ def _fetch_context(report_type: str, n_results: int = 8) -> tuple[str, list[str]
                 all_docs.append(doc)
                 all_sources.append(meta.get("source", "correo"))
 
-    context = "\n---\n".join(all_docs) if all_docs else "No hay datos disponibles."
+    # Truncar contexto para no superar el contexto del modelo (4096 tokens)
+    context_raw = "\n---\n".join(all_docs) if all_docs else "No hay datos disponibles."
+    context = context_raw[:4000] if len(context_raw) > 4000 else context_raw
     return context, list(dict.fromkeys(all_sources))
 
 
@@ -178,7 +180,9 @@ def generate_report(report_type: str) -> dict:
         ("human", "Datos disponibles:\n{context}\n\nGenera el informe completo."),
     ])
 
-    chain = prompt | get_llm() | StrOutputParser()
+    chain = prompt | get_llm(num_predict=1024) | StrOutputParser()
     content = chain.invoke({"context": context})
 
     return {"report_type": report_type, "content": content, "sources": sources}
+
+
