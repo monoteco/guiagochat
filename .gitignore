@@ -14,3 +14,9 @@ chroma_db/
 *.swp
 *.swo
 node_modules/
+
+finetune_output/
+reports_output/
+caro.txt
+telegram.txt
+*.txt

@@ -167,6 +167,7 @@ _REPORT_META = {
     "tactico":        "Plan Tactico (90 dias)",
     "comunicacion":   "Analisis de Comunicacion",
     "comercial":      "Informe Comercial",
+    "puesto_carolina": "Descripcion Puesto de Trabajo - Carolina",
 }
 
 
@@ -216,3 +217,9 @@ def report_comunicacion():
 def report_comercial():
     """Genera un Informe Comercial con estado del pipeline y recomendaciones."""
     return generate_report("comercial")
+
+
+@router.post("/reports/puesto_carolina", response_model=ReportResponse, tags=["Informes"])
+def report_puesto_carolina():
+    """Genera la Descripcion del Puesto de Trabajo de Carolina."""
+    return generate_report("puesto_carolina")

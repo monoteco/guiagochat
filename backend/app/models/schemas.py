@@ -125,6 +125,7 @@ ReportType = Literal[
     'tactico',
     'comunicacion',
     'comercial',
+    'puesto_carolina',
 ]
 
 

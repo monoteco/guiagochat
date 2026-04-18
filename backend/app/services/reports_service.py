@@ -40,6 +40,13 @@ _REPORT_QUERIES = {
         "embudo comercial fases lead oportunidad",
         "facturacion ingresos temporada",
     ],
+    "puesto_carolina": [
+        "Carolina envia correos gestiona clientes reservas",
+        "Carolina responde atiende coordina organiza",
+        "tareas diarias Carolina funciones responsabilidades",
+        "Carolina presupuesto factura contrato cliente",
+        "horario trabajo tiempo dedicado Carolina actividad",
+    ],
 }
 
 _REPORT_PROMPTS = {
@@ -119,6 +126,20 @@ _REPORT_PROMPTS = {
         "4) Analisis por temporada o periodo, "
         "5) Recomendaciones comerciales inmediatas. "
         "Incluye cifras y nombres concretos del contexto."
+    ),
+    "puesto_carolina": (
+        "Eres un consultor de recursos humanos. "
+        "Analizando EXCLUSIVAMENTE los correos y datos del contexto, deduce y redacta "
+        "la DESCRIPCION DEL PUESTO DE TRABAJO de Carolina con: "
+        "1) Identificacion del puesto: nombre, area, dependencia jerarquica, "
+        "2) Mision del puesto: objetivo principal inferido de su actividad real, "
+        "3) Funciones y responsabilidades principales (lista detallada con ejemplos reales de los correos), "
+        "4) Perfil de interaccion: con quien se comunica (clientes, proveedores, equipo), tipo de comunicaciones, "
+        "5) Carga de trabajo estimada: volumen de correos, frecuencia, temas recurrentes, "
+        "6) Competencias observadas: habilidades demostradas en la comunicacion, "
+        "7) Horario y dedicacion estimada segun patrones de actividad en correos. "
+        "Basa CADA punto en evidencias concretas de los correos del contexto. "
+        "Si Carolina no aparece con ese nombre, busca patrones de la persona mas activa en gestion."
     ),
 }
 
