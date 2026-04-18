@@ -11,9 +11,9 @@ load_dotenv(_PROJECT_ROOT / ".env")
 
 
 class Settings(BaseSettings):
-    # Replicate LLM - usar modelo fine-tuned o público
+    # Replicate LLM - cambiar a modelo que existe
     replicate_api_token: str = ""  # Se define en .env como r8_xxxxx
-    replicate_model: str = "mistral-community/mistral-7b-instruct-v0.2"
+    replicate_model: str = "meta-llama/llama-2-7b-chat"  # Modelo que existe en Replicate
     
     # ChromaDB & Datos
     chroma_persist_dir: str = "./chroma_db"
