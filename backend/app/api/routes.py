@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 from app.models.schemas import (
     ChatRequest, ChatResponse,
     IngestRequest, IngestResponse,
@@ -8,6 +8,7 @@ from app.models.schemas import (
     CompareRequest, CompareResponse,
     FinetuneDatasetResponse, FinetuneTrainRequest, FinetuneTrainResponse,
     FinetuneJobStatus, FinetuneExportRequest,
+    ReportRequest, ReportResponse,
 )
 from app.services.rag_service import query_rag
 from app.services.crm_service import create_deal, update_phase, list_deals, search_deals
@@ -19,6 +20,7 @@ from app.services.finetune_service import (
 from app.ingestion.email_loader import ingest_emails
 from app.ingestion.document_loader import ingest_documents
 from app.ingestion.db_loader import ingest_db
+from app.services.reports_service import generate_report
 
 router = APIRouter()
 
@@ -153,3 +155,64 @@ def finetune_export_endpoint(req: FinetuneExportRequest):
         raise HTTPException(status_code=400, detail="model must be 'llama31' or 'mistral7b'")
     result = start_export(req.model)
     return result
+
+
+# ---------- Informes y documentos ----------
+
+_REPORT_META = {
+    "procedimientos": "Manual de Procedimientos",
+    "negocios":       "Manual de Negocios",
+    "clientes":       "Estudio de Clientes",
+    "estrategico":    "Plan Estrategico",
+    "tactico":        "Plan Tactico (90 dias)",
+    "comunicacion":   "Analisis de Comunicacion",
+    "comercial":      "Informe Comercial",
+}
+
+
+@router.get("/reports", tags=["Informes"])
+def list_reports():
+    """Lista los tipos de informes disponibles."""
+    return [{"report_type": k, "title": v} for k, v in _REPORT_META.items()]
+
+
+@router.post("/reports/procedimientos", response_model=ReportResponse, tags=["Informes"])
+def report_procedimientos():
+    """Genera el Manual de Procedimientos de GuiaGo basado en los correos."""
+    return generate_report("procedimientos")
+
+
+@router.post("/reports/negocios", response_model=ReportResponse, tags=["Informes"])
+def report_negocios():
+    """Genera el Manual de Negocios basado en los correos y actividad de GuiaGo."""
+    return generate_report("negocios")
+
+
+@router.post("/reports/clientes", response_model=ReportResponse, tags=["Informes"])
+def report_clientes():
+    """Genera un Estudio de Clientes con segmentos, perfiles y patrones de compra."""
+    return generate_report("clientes")
+
+
+@router.post("/reports/estrategico", response_model=ReportResponse, tags=["Informes"])
+def report_estrategico():
+    """Genera el Plan Estrategico anual basado en los datos de la empresa."""
+    return generate_report("estrategico")
+
+
+@router.post("/reports/tactico", response_model=ReportResponse, tags=["Informes"])
+def report_tactico():
+    """Genera el Plan Tactico de los proximos 90 dias con acciones y prioridades."""
+    return generate_report("tactico")
+
+
+@router.post("/reports/comunicacion", response_model=ReportResponse, tags=["Informes"])
+def report_comunicacion():
+    """Analiza los patrones de comunicacion con clientes y sugiere mejoras."""
+    return generate_report("comunicacion")
+
+
+@router.post("/reports/comercial", response_model=ReportResponse, tags=["Informes"])
+def report_comercial():
+    """Genera un Informe Comercial con estado del pipeline y recomendaciones."""
+    return generate_report("comercial")

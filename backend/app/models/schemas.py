@@ -1,4 +1,5 @@
-﻿from pydantic import BaseModel
+from typing import Literal
+from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
@@ -113,3 +114,25 @@ class FinetuneJobStatus(BaseModel):
 
 class FinetuneExportRequest(BaseModel):
     model: str
+
+# ---------- Informes / Documentos ----------
+
+ReportType = Literal[
+    'procedimientos',
+    'negocios',
+    'clientes',
+    'estrategico',
+    'tactico',
+    'comunicacion',
+    'comercial',
+]
+
+
+class ReportRequest(BaseModel):
+    report_type: ReportType
+
+
+class ReportResponse(BaseModel):
+    report_type: str
+    content: str
+    sources: list[str] = []
