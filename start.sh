@@ -6,6 +6,11 @@
 set -e
 cd "$(dirname "$0")"
 
+# Load .env into environment
+if [ -f ~/.env ]; then
+    export $(cat ~/.env | grep -v '^#' | xargs)
+fi
+
 # Activate venv
 source venv/bin/activate
 
