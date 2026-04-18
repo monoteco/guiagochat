@@ -173,7 +173,7 @@ def main():
         args=sft_cfg,
         train_dataset=dataset["train"],
         eval_dataset=dataset.get("validation"),
-        processing_class=tokenizer,
+        tokenizer=tokenizer,
     )
 
     print("Starting training...")
