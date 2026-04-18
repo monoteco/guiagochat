@@ -4,21 +4,21 @@ from dotenv import load_dotenv
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
-# Load .env from home directory first
+# Cargar .env desde el home directory primero
 load_dotenv(Path.home() / ".env")
-# Then load from project root if it exists
+# Luego desde la raíz del proyecto si existe
 load_dotenv(_PROJECT_ROOT / ".env")
 
 
 class Settings(BaseSettings):
-    # Replicate LLM - cambiar a modelo que existe
-    replicate_api_token: str = ""  # Se define en .env como r8_xxxxx
-    replicate_model: str = "meta/meta-llama-3-8b-instruct"  # Modelo que existe en Replicate
-    
+    # Ollama LLM
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama2"
+
     # ChromaDB & Datos
     chroma_persist_dir: str = "./chroma_db"
     data_dir: str = "./data"
-    
+
     # API
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
