@@ -161,6 +161,7 @@ def main():
         fp16=False,
         bf16=use_gpu,
         use_cpu=not use_gpu,
+        gradient_checkpointing=use_gpu,
         dataset_text_field="text",
         report_to="none",
         eval_strategy="steps" if val_file.exists() else "no",

@@ -34,10 +34,10 @@ training:
     - "v_proj"
     - "k_proj"
     - "o_proj"
-  max_seq_length: 1024        # reduced from 2048 for speed, still covers 95% of emails
+  max_seq_length: 512         # reduced for OOM safety on A10 24GB
   num_epochs: 1
-  batch_size: 8               # GPU can handle 8-16 easily
-  gradient_accumulation_steps: 2  # reduced from 4
+  batch_size: 1               # safe for A10 with Mistral 7B
+  gradient_accumulation_steps: 16  # compensate for small batch
   learning_rate: 2.0e-4
   warmup_ratio: 0.03
   lr_scheduler: "cosine"
