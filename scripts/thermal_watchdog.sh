@@ -1,8 +1,8 @@
 #!/bin/bash
 # Thermal watchdog: pausa/reanuda train.py segun temperatura del CPU
 # Limites: pausa >85C, reanuda <70C
-TEMP_PAUSE=85
-TEMP_RESUME=70
+TEMP_PAUSE=88
+TEMP_RESUME=75
 LOG=~/guiagochat/logs/thermal.log
 PAUSED=0
 
