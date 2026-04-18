@@ -13,7 +13,7 @@ load_dotenv(_PROJECT_ROOT / ".env")
 class Settings(BaseSettings):
     # Replicate LLM - cambiar a modelo que existe
     replicate_api_token: str = ""  # Se define en .env como r8_xxxxx
-    replicate_model: str = "replicate/llama-2-7b"  # Modelo que existe en Replicate
+    replicate_model: str = "meta/meta-llama-3-8b-instruct"  # Modelo que existe en Replicate
     
     # ChromaDB & Datos
     chroma_persist_dir: str = "./chroma_db"
