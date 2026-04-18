@@ -1,0 +1,11 @@
+# Archivos del modelo (muy grandes)
+adapters/
+*.bin
+*.safetensors
+
+# Cache
+__pycache__/
+.cog/
+
+# Logs
+*.log

@@ -1,0 +1,39 @@
+# Cog configuration for Replicate
+# Build: cog build
+# Push: cog push r8.io/USERNAME/guiagochat-mistral7b
+
+build:
+  gpu: true
+  cuda: "12.1"
+  python_version: "3.11"
+
+predict: "predict.py:Predictor"
+
+# Input/Output schema
+input:
+  prompt:
+    description: "Tu pregunta o mensaje para el asistente"
+    type: "string"
+    default: "¿Quiénes son nuestros clientes principales?"
+  temperature:
+    description: "Creatividad (0.1=determinista, 1.0=creativo)"
+    type: "number"
+    default: 0.7
+    minimum: 0.0
+    maximum: 2.0
+  top_p:
+    description: "Nucleus sampling (0.9 típico)"
+    type: "number"
+    default: 0.9
+    minimum: 0.0
+    maximum: 1.0
+  max_tokens:
+    description: "Máximo tokens a generar"
+    type: "integer"
+    default: 512
+    minimum: 1
+    maximum: 2048
+
+output:
+  description: "Respuesta del modelo"
+  type: "string"
