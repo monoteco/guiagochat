@@ -1,5 +1,5 @@
 import os, replicate
-os.environ["REPLICATE_API_TOKEN"] = "r8_IIhRN4yMZRayFAj0EiY4qnYqFREkszq2fvpRd"
+os.environ["REPLICATE_API_TOKEN"] = os.environ.get("REPLICATE_API_TOKEN", "")
 modelos = ["meta-llama/llama-2-7b-chat", "mistral-community/mistral-7b-instruct-v0.2"]
 for m in modelos:
     try:

@@ -11,7 +11,10 @@ load_dotenv(_PROJECT_ROOT / ".env")
 
 
 class Settings(BaseSettings):
-    # Ollama LLM
+    # Modal inference endpoint
+    modal_endpoint_url: str = "https://hernandogerman--guiago-inference-guiagomodel-chat.modal.run"
+
+    # Ollama LLM (fallback local)
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "mistral-guiago:7b-q4_K_M"
 

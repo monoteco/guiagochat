@@ -37,6 +37,7 @@ image = (
         "safetensors>=0.4.3",
         "huggingface-hub>=0.23.0",
         "bitsandbytes>=0.43.0",
+        "fastapi[standard]>=0.115.0",
     )
     .add_local_dir(
         local_path="finetune_output/mistral7b",
@@ -74,9 +75,10 @@ class ChatResponse(BaseModel):
     volumes={MODEL_CACHE_DIR: model_cache_vol},
     secrets=[modal.Secret.from_name("huggingface-token")],
     timeout=600,
-    container_idle_timeout=300,
-    allow_concurrent_inputs=4,
+    scaledown_window=300,
+
 )
+@modal.concurrent(max_inputs=4)
 class GuiaGoModel:
 
     @modal.enter()
@@ -112,7 +114,7 @@ class GuiaGoModel:
         model_cache_vol.commit()
         print("Model ready!")
 
-    @modal.web_endpoint(method="POST")
+    @modal.fastapi_endpoint(method="POST")
     def chat(self, request: ChatRequest) -> ChatResponse:
         import torch
 
