@@ -1,0 +1,5 @@
+torch==2.1.2
+transformers==4.36.2
+peft==0.7.1
+bitsandbytes==0.41.3
+cog==0.9.15
