@@ -3,7 +3,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-.env
+config/.env
 .venv/
 venv/
 *.log
@@ -17,6 +17,6 @@ node_modules/
 
 finetune_output/
 reports_output/
-caro.txt
-telegram.txt
-*.txt
+config/caro.txt
+config/telegram.txt
+config/*.txt

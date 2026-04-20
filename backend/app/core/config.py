@@ -7,7 +7,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 # Cargar .env desde el home directory primero
 load_dotenv(Path.home() / ".env")
 # Luego desde la raíz del proyecto si existe
-load_dotenv(_PROJECT_ROOT / ".env")
+load_dotenv(_PROJECT_ROOT / "config" / ".env")
 
 
 class Settings(BaseSettings):
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8080
 
-    model_config = {"env_file": str(_PROJECT_ROOT / ".env"), "extra": "ignore"}
+    model_config = {"env_file": str(_PROJECT_ROOT / "config" / ".env"), "extra": "ignore"}
 
 
 settings = Settings()
