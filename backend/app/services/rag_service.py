@@ -10,9 +10,9 @@ SYSTEM_PROMPT = (
 )
 
 
-def query_rag(message: str, collection_name: str = "general") -> dict:
+def query_rag(message: str, collection_name: str = "memoria") -> dict:
     collection = get_or_create_collection(collection_name)
-    results = collection.query(query_texts=[message], n_results=5)
+    results = collection.query(query_texts=[message], n_results=10)
 
     context_docs = results.get("documents", [[]])[0]
     metadatas = results.get("metadatas", [[]])[0]

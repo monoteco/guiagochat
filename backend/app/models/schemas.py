@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
-    collection: str = "general"
+    collection: str = "memoria"
 
 
 class ChatResponse(BaseModel):
