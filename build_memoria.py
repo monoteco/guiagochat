@@ -83,7 +83,22 @@ except:
     pass
 mem_col = client.create_collection(COLLECTION)
 
-docs_to_add = []
+def safe_add(col, doc_id, doc_text, meta):
+    """Inserta o actualiza un documento en ChromaDB."""
+    try:
+        col.add(ids=[doc_id], documents=[doc_text], metadatas=[meta])
+    except Exception:
+        col.update(ids=[doc_id], documents=[doc_text], metadatas=[meta])
+
+def call_modal_retry(system_msg, user_msg, max_tokens=700, retries=2):
+    for attempt in range(retries + 1):
+        try:
+            return call_modal(system_msg, user_msg, max_tokens)
+        except Exception as e:
+            if attempt < retries:
+                print(f"     Reintento {attempt+1}...", flush=True)
+            else:
+                return f"Error tras {retries+1} intentos: {e}"
 
 # === 1. PERSONAS INTERNAS ===
 SYSTEM_INTERNO = (
@@ -93,25 +108,22 @@ SYSTEM_INTERNO = (
     "y cualquier patron relevante observado. Redacta en espanol, de forma concisa y util."
 )
 internal_emails = {e: items for e, items in by_para.items() if INTERNAL_DOMAIN in e}
-print(f"\nPersonas internas detectadas: {list(internal_emails.keys())}", flush=True)
+print(f"\nPersonas internas detectadas: {len(internal_emails)}", flush=True)
 
 for email, items in internal_emails.items():
     count = len(items)
     print(f"  [INTERNO] {email} ({count} correos recibidos)...", flush=True)
     ctx = build_context(items)
     user_msg = f"Persona: {email}\nCorreos recibidos: {count}\n\nEMAILS:\n{ctx}"
-    try:
-        summary = call_modal(SYSTEM_INTERNO, user_msg)
-    except Exception as e:
-        summary = f"Error: {e}"
-    docs_to_add.append({
-        "id":   f"persona_{email}",
-        "doc":  f"FICHA DE PERSONA INTERNA: {email}\n\n{summary}",
-        "meta": {"tipo": "persona_interna", "email": email, "n_correos": count}
-    })
+    summary = call_modal_retry(SYSTEM_INTERNO, user_msg)
+    doc_id = "persona_" + re.sub(r"[^a-zA-Z0-9_-]", "_", email)[:80]
+    safe_add(mem_col,
+        doc_id,
+        f"FICHA DE PERSONA INTERNA: {email}\n\n{summary}",
+        {"tipo": "persona_interna", "email": email, "n_correos": count})
     print("     OK", flush=True)
 
-# === 2. CONTACTOS EXTERNOS PRINCIPALES ===
+# === 2. CONTACTOS EXTERNOS ===
 SYSTEM_EXTERNO = (
     "Eres un asistente CRM de GuiaGo. Analiza los correos recibidos de este contacto externo "
     "y genera una ficha que incluya: quienes son, que quieren o proponen, "
@@ -122,7 +134,7 @@ external = [
     (e, items) for e, items in by_sender.items()
     if INTERNAL_DOMAIN not in e and not SKIP_RE.search(e)
 ]
-external_ranked = sorted(external, key=lambda x: len(x[1]), reverse=True)  # todos los contactos reales
+external_ranked = sorted(external, key=lambda x: len(x[1]), reverse=True)
 print(f"\nContactos externos a procesar: {len(external_ranked)}", flush=True)
 
 for email, items in external_ranked:
@@ -135,16 +147,13 @@ for email, items in external_ranked:
         f"Remitente: {email}\nTotal correos: {count}\n"
         f"Primera comunicacion: {primera}\nUltima comunicacion: {ultima}\n\nEMAILS:\n{ctx}"
     )
-    try:
-        summary = call_modal(SYSTEM_EXTERNO, user_msg)
-    except Exception as e:
-        summary = f"Error: {e}"
-    docs_to_add.append({
-        "id":   f"contacto_{email}",
-        "doc":  f"FICHA DE CONTACTO EXTERNO: {email}\n\nPeriodo: {primera} - {ultima}\n\n{summary}",
-        "meta": {"tipo": "contacto_externo", "email": email, "n_correos": count,
-                 "primera": primera, "ultima": ultima}
-    })
+    summary = call_modal_retry(SYSTEM_EXTERNO, user_msg)
+    doc_id = "contacto_" + re.sub(r"[^a-zA-Z0-9_-]", "_", email)[:80]
+    safe_add(mem_col,
+        doc_id,
+        f"FICHA DE CONTACTO EXTERNO: {email}\n\nPeriodo: {primera} - {ultima}\n\n{summary}",
+        {"tipo": "contacto_externo", "email": email, "n_correos": count,
+         "primera": primera, "ultima": ultima})
     print("     OK", flush=True)
 
 # === 3. RESUMEN GLOBAL DEL NEGOCIO ===
@@ -158,23 +167,12 @@ SYSTEM_GLOBAL = (
 # Muestra representativa: 1 de cada 20 emails
 sample = [doc for doc in all_docs[::10]][:120]
 sample_text = "\n---\n".join(s[:300] for s in sample)
-try:
-    global_summary = call_modal(SYSTEM_GLOBAL, f"MUESTRA DE CORREOS:\n{sample_text}", max_tokens=800)
-except Exception as e:
-    global_summary = f"Error: {e}"
-docs_to_add.append({
-    "id":   "resumen_global_negocio",
-    "doc":  f"RESUMEN GLOBAL DE GUIAGO\n\n{global_summary}",
-    "meta": {"tipo": "resumen_global"}
-})
+global_summary = call_modal_retry(SYSTEM_GLOBAL, f"MUESTRA DE CORREOS:\n{sample_text}", max_tokens=800)
+safe_add(mem_col,
+    "resumen_global_negocio",
+    f"RESUMEN GLOBAL DE GUIAGO\n\n{global_summary}",
+    {"tipo": "resumen_global"})
 print("     OK", flush=True)
 
-# === Insertar todo en ChromaDB ===
-print(f"\nInsertando {len(docs_to_add)} documentos en coleccion 'memoria'...", flush=True)
-mem_col.add(
-    ids       = [d["id"] for d in docs_to_add],
-    documents = [d["doc"] for d in docs_to_add],
-    metadatas = [d["meta"] for d in docs_to_add],
-)
-print(f"Coleccion 'memoria' creada con {mem_col.count()} documentos.", flush=True)
+print(f"\nColeccion 'memoria' creada con {mem_col.count()} documentos.", flush=True)
 print("DONE", flush=True)
