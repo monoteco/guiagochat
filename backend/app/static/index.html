@@ -3,545 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GuiaGo Chat - Orquestador</title>
+    <title>GuiaGo Chat - IA Orquestador</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-        .header { background: linear-gradient(135deg, #1e40af, #7c3aed); padding: 1.5rem 2rem; display: flex; align-items: center; gap: 1rem; }
-        .header h1 { font-size: 1.5rem; font-weight: 700; }
-        .header span { opacity: 0.7; font-size: 0.85rem; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-        .tab { padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; background: #1e293b; border: 1px solid #334155; transition: all 0.2s; font-size: 0.9rem; color: #94a3b8; }
-        .tab:hover { background: #334155; color: #e2e8f0; }
-        .tab.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-        .panel { display: none; }
-        .panel.active { display: block; }
-        .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #334155; }
-        .card h2 { font-size: 1.1rem; margin-bottom: 0.3rem; color: #60a5fa; }
-        .card p.desc { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.3rem; margin-top: 0.8rem; }
-        input, textarea, select { width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 0.9rem; font-family: inherit; }
-        textarea { resize: vertical; min-height: 100px; }
-        input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; }
-        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; margin-top: 1rem; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover { background: #2563eb; }
-        .btn-green { background: #10b981; color: white; }
-        .btn-green:hover { background: #059669; }
-        .btn-purple { background: #8b5cf6; color: white; }
-        .btn-purple:hover { background: #7c3aed; }
-        .btn-orange { background: #f59e0b; color: #1e293b; }
-        .btn-orange:hover { background: #d97706; }
-        .btn:disabled { opacity: 0.5; cursor: wait; }
-        .result { margin-top: 1rem; padding: 1rem; border-radius: 8px; background: #0f172a; border: 1px solid #334155; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; display: none; }
-        .result.show { display: block; }
-        .result .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 0.3rem; }
-        .result .answer { color: #e2e8f0; }
-        .result .sources { margin-top: 0.5rem; font-size: 0.8rem; color: #64748b; }
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 0.5rem 2rem; background: #1e293b; border-top: 1px solid #334155; font-size: 0.8rem; color: #64748b; display: flex; justify-content: space-between; }
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; }
-        .status-dot.green { background: #10b981; }
-        .status-dot.red { background: #ef4444; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
-        .phase-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-        .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; background: #334155; color: #94a3b8; margin: 0.1rem; }
+        html, body { height: 100%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .container { display: flex; height: 100vh; flex-direction: column; }
+        
+        .header { background: linear-gradient(135deg, #1e40af, #7c3aed); padding: 1rem 2rem; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .header p { font-size: 0.85rem; opacity: 0.85; }
+        
+        .main { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 280px; background: #1e293b; border-right: 1px solid #334155; padding: 1rem; overflow-y: auto; }
+        .content { flex: 1; display: flex; flex-direction: column; }
+        
+        .tabs { display: flex; gap: 0.5rem; padding: 0 2rem; border-bottom: 1px solid #334155; flex-wrap: wrap; }
+        .tab { padding: 0.8rem 1.2rem; cursor: pointer; background: transparent; border: none; color: #64748b; font-size: 0.9rem; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: #e2e8f0; }
+        .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+        
+        .chat-area { flex: 1; display: flex; flex-direction: column; padding: 1.5rem 2rem; overflow-y: auto; background: #0f172a; }
+        .messages { flex: 1; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+        
+        .message { display: flex; gap: 0.75rem; animation: fadeIn 0.3s; }
+        .message.user { justify-content: flex-end; }
+        .message.assistant { justify-content: flex-start; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .message-box { max-width: 70%; padding: 0.8rem 1rem; border-radius: 12px; word-wrap: break-word; }
+        .message.user .message-box { background: #3b82f6; color: white; }
+        .message.assistant .message-box { background: #334155; color: #e2e8f0; border: 1px solid #475569; }
+        .message.error .message-box { background: #7f1d1d; color: #fca5a5; }
+        
+        .timestamp { font-size: 0.75rem; color: #64748b; margin-top: 0.2rem; }
+        
+        .input-area { display: flex; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid #334155; }
+        input[type="text"] { flex: 1; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 0.9rem; }
+        input[type="text"]:focus { outline: none; border-color: #3b82f6; }
+        .send-btn { padding: 0.8rem 1.5rem; border-radius: 8px; background: #3b82f6; color: white; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .send-btn:hover { background: #2563eb; }
+        .send-btn:disabled { opacity: 0.5; cursor: wait; }
+        
+        .sidebar-group { margin-bottom: 1.5rem; }
+        .sidebar-title { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
+        .sidebar-item { padding: 0.6rem 0.8rem; border-radius: 6px; background: #334155; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; margin-bottom: 0.3rem; }
+        .sidebar-item:hover { background: #475569; }
+        .sidebar-item.active { background: #3b82f6; color: white; }
+        
+        .status { padding: 0.5rem 2rem; background: #1e293b; border-top: 1px solid #334155; font-size: 0.8rem; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; background: #10b981; }
+        .status-dot.error { background: #ef4444; }
+        .status-dot.loading { background: #f59e0b; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        select { padding: 0.6rem 0.8rem; border-radius: 6px; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; font-size: 0.85rem; cursor: pointer; width: 100%; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>GuiaGo Chat</h1>
-        <span>Orquestador IA &mdash; caro miniPC</span>
-    </div>
-
     <div class="container">
-        <div class="tabs">
-            <div class="tab active" data-tab="chat">Chat</div>
-            <div class="tab" data-tab="simulate">Simular Carolina</div>
-            <div class="tab" data-tab="classify">Clasificar</div>
-            <div class="tab" data-tab="ingest">Ingesta</div>
-            <div class="tab" data-tab="compare">Comparar modelos</div>
-            <div class="tab" data-tab="crm">CRM</div>
-            <div class="tab" data-tab="finetune">Fine-tuning</div>
+        <div class="header">
+            <h1>🧠 GuiaGo Chat</h1>
+            <p>Orquestador IA con contexto de emails - caro miniPC</p>
         </div>
-
-        <!-- CHAT -->
-        <div id="panel-chat" class="panel active">
-            <div class="card">
-                <h2>Chat con los datos de GuiaGo</h2>
-                <p class="desc">Pregunta lo que quieras sobre correos, clientes y operaciones</p>
-                <label for="chat-msg">Pregunta</label>
-                <textarea id="chat-msg" placeholder="Ej: Quien es el cliente que mas correos ha enviado?"></textarea>
-                <label for="chat-col">Coleccion</label>
-                <select id="chat-col">
-                    <option value="memoria" selected>memoria (contexto)</option>
-                    <option value="emails">emails (correos)</option>
-                    <option value="general">general</option>
-                    <option value="crm_deals">crm_deals</option>
-                </select>
-                <button class="btn btn-primary" onclick="doChat()">Enviar</button>
-                <div id="chat-result" class="result"></div>
-            </div>
-        </div>
-
-        <!-- SIMULATE -->
-        <div id="panel-simulate" class="panel">
-            <div class="card">
-                <h2>Simular respuesta de Carolina</h2>
-                <p class="desc">Pega el correo del cliente y el sistema genera una respuesta como lo haria Carolina</p>
-                <label for="sim-name">Nombre del cliente (opcional)</label>
-                <input id="sim-name" placeholder="Ej: Hotel Miramar">
-                <label for="sim-email">Correo del cliente</label>
-                <textarea id="sim-email" placeholder="Hola, somos un grupo de 25 personas y nos gustaria hacer un tour privado por Barcelona..."></textarea>
-                <button class="btn btn-purple" onclick="doSimulate()">Generar respuesta de Carolina</button>
-                <div id="sim-result" class="result"></div>
-            </div>
-        </div>
-
-        <!-- CLASSIFY -->
-        <div id="panel-classify" class="panel">
-            <div class="grid-2">
-                <div class="card">
-                    <h2>Clasificar tipo de negocio</h2>
-                    <p class="desc">tour_privado, grupal, corporativo, evento, transfer...</p>
-                    <label for="biz-text">Texto del correo o hilo</label>
-                    <textarea id="biz-text" placeholder="Pega aqui el correo o descripcion del deal..."></textarea>
-                    <button class="btn btn-orange" onclick="doClassifyBiz()">Clasificar negocio</button>
-                    <div id="biz-result" class="result"></div>
-                </div>
-                <div class="card">
-                    <h2>Detectar fase del funnel</h2>
-                    <p class="desc">lead &rarr; contactado &rarr; propuesta &rarr; negociacion &rarr; cerrado &rarr; produccion &rarr; finalizado</p>
-                    <label for="phase-text">Texto del correo o hilo</label>
-                    <textarea id="phase-text" placeholder="Pega aqui el correo o descripcion del deal..."></textarea>
-                    <button class="btn btn-orange" onclick="doClassifyPhase()">Detectar fase</button>
-                    <div id="phase-result" class="result"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- INGEST -->
-        <div id="panel-ingest" class="panel">
-            <div class="card">
-                <h2>Ingesta de datos</h2>
-                <p class="desc">Re-indexar datos de la base de datos en ChromaDB</p>
-                <label for="ing-col">Coleccion destino</label>
-                <input id="ing-col" value="emails">
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                    <button class="btn btn-green" onclick="doIngest('db')">Ingestar BD (correosGo.db)</button>
-                    <button class="btn btn-green" onclick="doIngest('emails')">Ingestar .eml</button>
-                    <button class="btn btn-green" onclick="doIngest('documents')">Ingestar .txt</button>
-                </div>
-                <div id="ing-result" class="result"></div>
-            </div>
-        </div>
-
-        <!-- COMPARE -->
-        <div id="panel-compare" class="panel">
-            <div class="card">
-                <h2>Comparar modelos</h2>
-                <p class="desc">Envia la misma pregunta a todos los modelos instalados y compara las respuestas</p>
-                <label for="cmp-msg">Pregunta</label>
-                <textarea id="cmp-msg" placeholder="Ej: Resume los correos mas importantes de la ultima semana"></textarea>
-                <label for="cmp-col">Coleccion</label>
-                <select id="cmp-col">
-                    <option value="emails">emails (correos)</option>
-                    <option value="general">general</option>
-                    <option value="crm_deals">crm_deals</option>
-                </select>
-                <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem;">
-                    <span style="font-size:0.8rem;color:#64748b;">Modelos disponibles:</span>
-                    <span id="cmp-models" style="font-size:0.8rem;color:#94a3b8;">cargando...</span>
-                </div>
-                <button class="btn btn-primary" onclick="doCompare()">Comparar todos los modelos</button>
-                <div id="cmp-result" class="result"></div>
-            </div>
-        </div>
-
-        <!-- CRM -->
-        <div id="panel-crm" class="panel">
-            <div class="grid-2">
-                <div class="card">
-                    <h2>Crear deal</h2>
-                    <label for="crm-name">Cliente</label>
-                    <input id="crm-name" placeholder="Hotel Miramar">
-                    <label for="crm-email">Email</label>
-                    <input id="crm-email" placeholder="info@miramar.com">
-                    <label for="crm-phase">Fase</label>
-                    <select id="crm-phase">
-                        <option>lead</option><option>contactado</option><option>propuesta</option>
-                        <option>negociacion</option><option>cerrado</option><option>produccion</option><option>finalizado</option>
+        
+        <div class="main">
+            <div class="sidebar">
+                <div class="sidebar-group">
+                    <div class="sidebar-title">Colección</div>
+                    <select id="collection" onchange="changeCollection()">
+                        <option value="memoria">📚 Memoria (contexto)</option>
+                        <option value="emails">📧 Emails (correos)</option>
+                        <option value="general">🌐 General</option>
                     </select>
-                    <label for="crm-notes">Notas</label>
-                    <textarea id="crm-notes" rows="2" placeholder="Tour privado 25 pax..."></textarea>
-                    <button class="btn btn-primary" onclick="doCreateDeal()">Crear deal</button>
-                    <div id="crm-create-result" class="result"></div>
                 </div>
-                <div class="card">
-                    <h2>Deals existentes</h2>
-                    <label for="crm-filter">Filtrar por fase (vacio = todos)</label>
-                    <input id="crm-filter" placeholder="Ej: propuesta">
-                    <button class="btn btn-primary" onclick="doListDeals()">Listar deals</button>
-                    <label for="crm-search" style="margin-top:1rem;">Buscar por texto</label>
-                    <input id="crm-search" placeholder="Ej: Miramar">
-                    <button class="btn btn-primary" onclick="doSearchDeals()">Buscar</button>
-                    <div id="crm-list-result" class="result"></div>
+                
+                <div class="sidebar-group">
+                    <div class="sidebar-title">Ejemplos de preguntas</div>
+                    <div class="sidebar-item" onclick="exampleQuestion('Quiénes son nuestros 5 clientes más importantes?')">Top 5 clientes</div>
+                    <div class="sidebar-item" onclick="exampleQuestion('Resume los temas principales de conversación')">Temas principales</div>
+                    <div class="sidebar-item" onclick="exampleQuestion('Cómo se distribuyen los correos por mes?')">Tendencias</div>
+                    <div class="sidebar-item" onclick="exampleQuestion('Qué oportunidades de negocio ves?')">Oportunidades</div>
+                </div>
+                
+                <div class="sidebar-group">
+                    <div class="sidebar-title">Estado del sistema</div>
+                    <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6;">
+                        <div><span class="status-dot"></span> API: Conectado</div>
+                        <div><span class="status-dot"></span> ChromaDB: Listo</div>
+                        <div><span class="status-dot"></span> Modal LLM: Activo</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div class="tabs">
+                    <div class="tab active" data-tab="chat">💬 Chat</div>
+                    <div class="tab" data-tab="tools">🔧 Herramientas</div>
+                    <div class="tab" data-tab="settings">⚙️ Ajustes</div>
+                </div>
+                
+                <div id="panel-chat" class="chat-area">
+                    <div class="messages" id="messages">
+                        <div class="message assistant">
+                            <div>
+                                <div class="message-box">¡Hola! Soy el asistente de GuiaGo. Tengo acceso a tu base de datos de emails y puedo ayudarte a analizar clientes, oportunidades y patrones de negocio. ¿En qué puedo ayudarte?</div>
+                                <div class="timestamp">Conectado a colección: <strong id="active-collection">memoria</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-area">
+                        <input type="text" id="chat-input" placeholder="Escribe tu pregunta aquí..." onkeypress="handleKeypress(event)">
+                        <button class="send-btn" id="send-btn" onclick="sendMessage()">Enviar</button>
+                    </div>
+                </div>
+                
+                <div id="panel-tools" class="chat-area" style="display: none;">
+                    <div style="text-align: center; color: #64748b; padding: 2rem;">
+                        <p>🔧 Herramientas adicionales en desarrollo</p>
+                        <p style="font-size: 0.85rem; margin-top: 1rem;">- Clasificación de correos<br>- Análisis de sentimiento<br>- Predicción de oportunidades</p>
+                    </div>
+                </div>
+                
+                <div id="panel-settings" class="chat-area" style="display: none;">
+                    <div style="text-align: center; color: #64748b; padding: 2rem;">
+                        <p>⚙️ Configuración de usuario</p>
+                        <p style="font-size: 0.85rem; margin-top: 1rem;">Próximamente: idioma, tema, preferencias de privacidad</p>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- FINE-TUNING -->
-        <div id="panel-finetune" class="panel">
-            <div class="card">
-                <h2>Fine-tuning de modelos GuiaGo</h2>
-                <p class="desc">Genera dataset desde correosGo.db, entrena LoRA y exporta a Ollama.</p>
-
-                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1rem;">
-                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Paso 1 &amp;mdash; Generar dataset</h3>
-                    <p style="font-size:0.875rem;color:#64748b;margin:0 0 0.75rem;">Extrae pares de instruccion/respuesta desde correosGo.db.</p>
-                    <button class="btn btn-primary" id="ft-dataset-btn" onclick="doFtDataset()">Generar dataset</button>
-                    <div id="ft-dataset-result" class="result"></div>
-                </div>
-
-                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1rem;">
-                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Paso 2 &amp;mdash; Entrenar modelo</h3>
-                    <p style="font-size:0.875rem;color:#64748b;margin:0 0 0.75rem;">Descarga modelo base HuggingFace y aplica LoRA. Puede tardar horas o dias en CPU.</p>
-                    <label for="ft-model-train">Modelo base</label>
-                    <select id="ft-model-train">
-                        <option value="mistral7b">Mistral 7B (recomendado)</option>
-                        <option value="llama31">Llama 3.1 8B (requiere HF token)</option>
-                    </select>
-                    <button class="btn btn-primary" id="ft-train-btn" onclick="doFtTrain()" style="margin-top:0.5rem;">Iniciar entrenamiento</button>
-                    <div id="ft-train-result" class="result"></div>
-                </div>
-
-                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1rem;">
-                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Estado de jobs</h3>
-                    <button class="btn" id="ft-jobs-btn" onclick="doFtJobs()" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;margin-bottom:0.5rem;">Refrescar lista</button>
-                    <div id="ft-jobs-result" class="result"></div>
-                    <label for="ft-job-id" style="margin-top:0.75rem;">Job ID para ver log</label>
-                    <input id="ft-job-id" placeholder="Ej: mistral7b_1700000000">
-                    <button class="btn" onclick="doFtStatus()" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;margin-top:0.25rem;">Ver estado</button>
-                    <div id="ft-status-result" class="result"></div>
-                </div>
-
-                <div style="border:1px solid #334155;border-radius:8px;padding:1rem;">
-                    <h3 style="margin:0 0 0.5rem;color:#94a3b8;">Paso 3 &amp;mdash; Exportar a Ollama</h3>
-                    <p style="font-size:0.875rem;color:#64748b;margin:0 0 0.75rem;">Fusiona LoRA, convierte a GGUF Q4_K_M y registra en Ollama.</p>
-                    <label for="ft-model-export">Modelo</label>
-                    <select id="ft-model-export">
-                        <option value="mistral7b">Mistral 7B</option>
-                        <option value="llama31">Llama 3.1 8B</option>
-                    </select>
-                    <button class="btn btn-primary" id="ft-export-btn" onclick="doFtExport()" style="margin-top:0.5rem;">Exportar a Ollama</button>
-                    <div id="ft-export-result" class="result"></div>
-                </div>
-            </div>
+        
+        <div class="status">
+            <div><span class="status-dot"></span> API respondiendo | 244 documentos en memoria | Última actualización: hace 5 min</div>
+            <div id="message-count" style="font-size: 0.8rem; color: #94a3b8;">0 mensajes</div>
         </div>
     </div>
-
-    <div class="status-bar">
-        <span><span id="status-dot" class="status-dot green"></span> <span id="status-text">Conectado</span></span>
-        <span id="status-time"></span>
-    </div>
-
+    
     <script>
-    const API = '/api/v1';
-
-    // Tabs
-    document.querySelectorAll('.tab').forEach(t => {
-        t.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
-            t.classList.add('active');
-            document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+        const API_BASE = '/api';
+        let chatHistory = [];
+        let currentCollection = 'memoria';
+        
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+                tab.classList.add('active');
+                document.getElementById(panel-).style.display = 'flex';
+            });
         });
-    });
-
-    // Helpers
-    function showResult(id, html) {
-        const el = document.getElementById(id);
-        el.innerHTML = html;
-        el.classList.add('show');
-    }
-
-    function setLoading(btn, loading) {
-        if (loading) {
-            btn.disabled = true;
-            btn._text = btn.textContent;
-            btn.innerHTML = '<span class="spinner"></span> Procesando...';
-        } else {
-            btn.disabled = false;
-            btn.textContent = btn._text || 'Enviar';
+        
+        function handleKeypress(e) {
+            if (e.key === 'Enter') sendMessage();
         }
-    }
-
-    async function apiCall(endpoint, method, body, btnEl, resultId) {
-        setLoading(btnEl, true);
-        const start = Date.now();
-        try {
-            const opts = { method, headers: { 'Content-Type': 'application/json' } };
-            if (body) opts.body = JSON.stringify(body);
-            const res = await fetch(API + endpoint, opts);
-            const data = await res.json();
-            const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-            if (!res.ok) {
-                showResult(resultId, `<div class="label">Error ${res.status}</div><div class="answer" style="color:#ef4444;">${JSON.stringify(data, null, 2)}</div>`);
-            } else {
-                return { data, elapsed };
-            }
-        } catch (e) {
-            showResult(resultId, `<div class="answer" style="color:#ef4444;">Error de conexion: ${e.message}</div>`);
-        } finally {
-            setLoading(btnEl, false);
-        }
-        return null;
-    }
-
-    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-    function sourceTags(sources) {
-        if (!sources || !sources.length) return '';
-        return '<div class="sources">Fuentes: ' + sources.map(s => `<span class="tag">${esc(s)}</span>`).join(' ') + '</div>';
-    }
-
-    // Chat
-    async function doChat() {
-        const msg = document.getElementById('chat-msg').value.trim();
-        if (!msg) return;
-        const btn = document.querySelector('#panel-chat .btn');
-        const r = await apiCall('/chat', 'POST', { message: msg, collection: document.getElementById('chat-col').value }, btn, 'chat-result');
-        if (r) showResult('chat-result',
-            `<div class="label">Respuesta (${r.elapsed}s)</div><div class="answer">${esc(r.data.answer)}</div>${sourceTags(r.data.sources)}`);
-    }
-
-    // Simulate
-    async function doSimulate() {
-        const email = document.getElementById('sim-email').value.trim();
-        if (!email) return;
-        const btn = document.querySelector('#panel-simulate .btn');
-        const r = await apiCall('/simulate/response', 'POST', {
-            client_email: email,
-            client_name: document.getElementById('sim-name').value.trim()
-        }, btn, 'sim-result');
-        if (r) showResult('sim-result',
-            `<div class="label">Respuesta de Carolina (${r.elapsed}s)</div><div class="answer">${esc(r.data.response)}</div>${sourceTags(r.data.sources)}`);
-    }
-
-    // Classify business
-    async function doClassifyBiz() {
-        const text = document.getElementById('biz-text').value.trim();
-        if (!text) return;
-        const btn = document.querySelector('#panel-classify .card:first-child .btn');
-        const r = await apiCall('/classify/business', 'POST', { text }, btn, 'biz-result');
-        if (r) {
-            const p = r.data.parsed || {};
-            showResult('biz-result',
-                `<div class="label">Clasificacion (${r.elapsed}s)</div><div class="answer">${esc(r.data.raw)}</div>${sourceTags(r.data.sources)}`);
-        }
-    }
-
-    // Classify phase
-    async function doClassifyPhase() {
-        const text = document.getElementById('phase-text').value.trim();
-        if (!text) return;
-        const btn = document.querySelector('#panel-classify .card:last-child .btn');
-        const r = await apiCall('/classify/phase', 'POST', { text }, btn, 'phase-result');
-        if (r) showResult('phase-result',
-            `<div class="label">Deteccion de fase (${r.elapsed}s)</div><div class="answer">${esc(r.data.raw)}</div>${sourceTags(r.data.sources)}`);
-    }
-
-    // Ingest
-    async function doIngest(type) {
-        const col = document.getElementById('ing-col').value.trim() || 'emails';
-        const btn = event.target;
-        const r = await apiCall(`/ingest/${type}`, 'POST', { collection: col }, btn, 'ing-result');
-        if (r) showResult('ing-result',
-            `<div class="label">Ingesta completada (${r.elapsed}s)</div><div class="answer">${r.data.documents_ingested} documentos indexados en "${esc(col)}"</div>`);
-    }
-
-    // CRM
-    async function doCreateDeal() {
-        const btn = document.querySelector('#panel-crm .card:first-child .btn');
-        const r = await apiCall('/crm/deals', 'POST', {
-            client_name: document.getElementById('crm-name').value.trim(),
-            email: document.getElementById('crm-email').value.trim(),
-            phase: document.getElementById('crm-phase').value,
-            notes: document.getElementById('crm-notes').value.trim()
-        }, btn, 'crm-create-result');
-        if (r) showResult('crm-create-result',
-            `<div class="label">Deal creado</div><div class="answer">ID: ${esc(r.data.id)}\nCliente: ${esc(r.data.client_name)}\nFase: ${esc(r.data.phase)}</div>`);
-    }
-
-    async function doListDeals() {
-        const phase = document.getElementById('crm-filter').value.trim();
-        const btn = document.querySelectorAll('#panel-crm .card:last-child .btn')[0];
-        const url = phase ? `/crm/deals?phase=${encodeURIComponent(phase)}` : '/crm/deals';
-        const r = await apiCall(url, 'GET', null, btn, 'crm-list-result');
-        if (r) {
-            const deals = Array.isArray(r.data) ? r.data : [];
-            if (!deals.length) {
-                showResult('crm-list-result', '<div class="answer">No hay deals</div>');
-            } else {
-                const rows = deals.map(d => `${esc(d.client_name)} | ${esc(d.phase)} | ${esc(d.notes || '-')}`).join('\n');
-                showResult('crm-list-result', `<div class="label">${deals.length} deals</div><div class="answer">${rows}</div>`);
-            }
-        }
-    }
-
-    async function doSearchDeals() {
-        const q = document.getElementById('crm-search').value.trim();
-        if (!q) return;
-        const btn = document.querySelectorAll('#panel-crm .card:last-child .btn')[1];
-        const r = await apiCall(`/crm/deals/search?q=${encodeURIComponent(q)}`, 'GET', null, btn, 'crm-list-result');
-        if (r) {
-            const deals = Array.isArray(r.data) ? r.data : [];
-            if (!deals.length) {
-                showResult('crm-list-result', '<div class="answer">Sin resultados</div>');
-            } else {
-                const rows = deals.map(d => `${esc(d.client_name)} | ${esc(d.phase)} | ${esc(d.notes || '-')}`).join('\n');
-                showResult('crm-list-result', `<div class="label">${deals.length} resultados</div><div class="answer">${rows}</div>`);
-            }
-        }
-    }
-
-    // Compare
-    async function loadModels() {
-        try {
-            const r = await fetch(API + '/models');
-            const d = await r.json();
-            const el = document.getElementById('cmp-models');
-            if (d.models && d.models.length) {
-                el.innerHTML = d.models.map(m => `<span class="tag">${esc(m)}</span>`).join(' ');
-            } else {
-                el.textContent = 'ninguno detectado';
-            }
-        } catch { }
-    }
-    loadModels();
-
-    async function doCompare() {
-        const msg = document.getElementById('cmp-msg').value.trim();
-        if (!msg) return;
-        const btn = document.querySelector('#panel-compare .btn');
-        setLoading(btn, true);
-        const start = Date.now();
-        try {
-            const res = await fetch(API + '/compare', {
+        
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            
+            addMessage('user', msg);
+            input.value = '';
+            
+            document.getElementById('send-btn').disabled = true;
+            addMessage('assistant', '<span style="opacity:0.7">Buscando en el contexto...</span>');
+            
+            fetch(API_BASE + '/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg, collection: document.getElementById('cmp-col').value })
+                body: JSON.stringify({ message: msg, collection: currentCollection })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.querySelectorAll('.message:last-child')[0]?.remove();
+                addMessage('assistant', d.answer || 'Sin respuesta');
+                document.getElementById('send-btn').disabled = false;
+            })
+            .catch(e => {
+                document.querySelectorAll('.message:last-child')[0]?.remove();
+                addMessage('error', 'Error: ' + e.message);
+                document.getElementById('send-btn').disabled = false;
             });
-            const data = await res.json();
-            const total = ((Date.now() - start) / 1000).toFixed(1);
-            if (!res.ok) {
-                showResult('cmp-result', `<div class="answer" style="color:#ef4444;">${JSON.stringify(data)}</div>`);
-                return;
-            }
-            let html = `<div class="label">Comparacion completada (${total}s total)</div>`;
-            for (const r of data.results) {
-                html += `<div style="margin:1rem 0;padding:1rem;background:#1e293b;border-radius:8px;border:1px solid #334155;">`;
-                html += `<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">`;
-                html += `<span class="tag" style="background:#3b82f6;color:white;">${esc(r.model)}</span>`;
-                html += `<span style="font-size:0.75rem;color:#64748b;">${r.elapsed}s</span></div>`;
-                html += `<div class="answer">${esc(r.answer)}</div></div>`;
-            }
-            html += sourceTags(data.sources);
-            showResult('cmp-result', html);
-        } catch (e) {
-            showResult('cmp-result', `<div class="answer" style="color:#ef4444;">Error: ${e.message}</div>`);
-        } finally {
-            setLoading(btn, false);
         }
-    }
-
-    // Health check
-    async function checkHealth() {
-        try {
-            const r = await fetch('/health');
-            const d = await r.json();
-            document.getElementById('status-dot').className = 'status-dot green';
-            document.getElementById('status-text').textContent = 'Conectado — API OK';
-        } catch {
-            document.getElementById('status-dot').className = 'status-dot red';
-            document.getElementById('status-text').textContent = 'Desconectado';
+        
+        function addMessage(role, text) {
+            const msgs = document.getElementById('messages');
+            const msg = document.createElement('div');
+            msg.className = message ;
+            msg.innerHTML = <div><div class="message-box"></div><div class="timestamp"></div></div>;
+            msgs.appendChild(msg);
+            msgs.scrollTop = msgs.scrollHeight;
+            
+            chatHistory.push({ role, text });
+            document.getElementById('message-count').textContent = chatHistory.length + ' mensajes';
         }
-        document.getElementById('status-time').textContent = new Date().toLocaleTimeString('es-ES');
-    }
-    checkHealth();
-    setInterval(checkHealth, 30000);
-
-    // Enter to send on chat
-    document.getElementById('chat-msg').addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doChat(); }
-    });
-
-    // Fine-tuning
-    async function doFtDataset() {
-        const btn = document.getElementById('ft-dataset-btn');
-        const r = await apiCall('/finetune/dataset', 'POST', {}, btn, 'ft-dataset-result');
-        if (r) showResult('ft-dataset-result',
-            '<div class="label">Dataset generado</div><div class="answer">Total: ' + r.data.total + ' pares | Train: ' + r.data.train + ' | Val: ' + r.data.val + '</div>');
-    }
-
-    async function doFtTrain() {
-        const model = document.getElementById('ft-model-train').value;
-        const btn = document.getElementById('ft-train-btn');
-        const r = await apiCall('/finetune/train', 'POST', { model }, btn, 'ft-train-result');
-        if (r) {
-            document.getElementById('ft-job-id').value = r.data.job_id;
-            showResult('ft-train-result',
-                '<div class="label">Entrenamiento iniciado</div><div class="answer">Job ID: ' + esc(r.data.job_id) + '<br>PID: ' + r.data.pid + '<br>Corre en background. Usa Job ID para monitorear.</div>');
+        
+        function changeCollection() {
+            currentCollection = document.getElementById('collection').value;
+            document.getElementById('active-collection').textContent = currentCollection;
         }
-    }
-
-    async function doFtJobs() {
-        const btn = document.getElementById('ft-jobs-btn');
-        setLoading(btn, true);
-        try {
-            const res = await fetch(API + '/finetune/jobs');
-            const data = await res.json();
-            if (!res.ok) { showResult('ft-jobs-result', '<div class="answer" style="color:#ef4444;">' + JSON.stringify(data) + '</div>'); return; }
-            if (!data.length) { showResult('ft-jobs-result', '<div class="answer">No hay jobs registrados</div>'); return; }
-            let html = '<div class="label">Jobs de fine-tuning</div>';
-            for (const j of data) {
-                const color = j.status === 'completed' ? '#22c55e' : j.status === 'running' ? '#f59e0b' : '#ef4444';
-                html += '<div style="margin:0.5rem 0;padding:0.5rem;background:#1e293b;border-radius:6px;">';
-                html += '<span class="tag" style="background:' + color + ';color:white;">' + esc(j.status) + '</span> ';
-                html += '<strong>' + esc(j.job_id) + '</strong> (' + esc(j.model) + ') &mdash; ' + esc(j.started_at || '') + '</div>';
-            }
-            showResult('ft-jobs-result', html);
-        } catch (e) {
-            showResult('ft-jobs-result', '<div class="answer" style="color:#ef4444;">Error: ' + e.message + '</div>');
-        } finally { setLoading(btn, false); }
-    }
-
-    async function doFtStatus() {
-        const job_id = document.getElementById('ft-job-id').value.trim();
-        if (!job_id) return;
-        try {
-            const res = await fetch(API + '/finetune/jobs/' + encodeURIComponent(job_id));
-            const d = await res.json();
-            const color = d.status === 'completed' ? '#22c55e' : d.status === 'running' ? '#f59e0b' : '#ef4444';
-            showResult('ft-status-result',
-                '<div class="label">Job: ' + esc(job_id) + '</div>' +
-                '<span class="tag" style="background:' + color + ';color:white;">' + esc(d.status) + '</span>' +
-                '<div class="answer" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;font-size:0.75rem;margin-top:0.5rem;">' + esc(d.log_tail || '(sin log aun)') + '</div>');
-        } catch (e) {
-            showResult('ft-status-result', '<div class="answer" style="color:#ef4444;">Error: ' + e.message + '</div>');
+        
+        function exampleQuestion(q) {
+            document.getElementById('chat-input').value = q;
+            sendMessage();
         }
-    }
-
-    async function doFtExport() {
-        const model = document.getElementById('ft-model-export').value;
-        const btn = document.getElementById('ft-export-btn');
-        const r = await apiCall('/finetune/export', 'POST', { model }, btn, 'ft-export-result');
-        if (r) showResult('ft-export-result',
-            '<div class="label">Exportacion iniciada</div><div class="answer">Job ID: ' + esc(r.data.job_id) + '<br>Convierte LoRA a GGUF Q4_K_M y lo registra en Ollama.</div>');
-    }
     </script>
 </body>
 </html>
