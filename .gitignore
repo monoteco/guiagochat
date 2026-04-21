@@ -1,22 +1,31 @@
+# Data & Logs (never sync)
+data/
+logs/
+finetune_output/
+
+# Credentials (never sync)
+credentials/
+.env
+.env.local
+*.txt
+
+# Backup & temp
+.backupfiles/
+tools-modal/
+
+# Python
 __pycache__/
-*.py[cod]
+*.pyc
+*.pyo
 *.egg-info/
 dist/
 build/
-config/.env
-.venv/
-venv/
-*.log
-data/
-logs/
-chroma_db/
-.DS_Store
-*.swp
-*.swo
-node_modules/
 
-finetune_output/
-reports_output/
-config/caro.txt
-config/telegram.txt
-config/*.txt
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
