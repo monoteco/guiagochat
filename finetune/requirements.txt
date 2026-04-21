@@ -1,11 +1,22 @@
-﻿transformers>=4.45.0
-peft>=0.13.0
-trl>=0.12.0
-datasets>=3.0.0
-accelerate>=0.34.0
-huggingface_hub>=0.24.0
-scipy>=1.11.0
-sentencepiece>=0.2.0
-protobuf>=4.25.0
-pyyaml>=6.0
-torch>=2.4.0
+# Transformers & ML
+transformers>=4.45.0,<4.50
+peft>=0.13.0,<0.14
+trl>=0.12.0,<0.13
+
+# Data & Training
+datasets>=3.0.0,<4.0
+accelerate>=0.34.0,<0.35
+
+# Hugging Face Hub
+huggingface_hub>=0.24.0,<0.25
+
+# Utilities
+scipy>=1.11.0,<1.15
+sentencepiece>=0.2.0,<0.3
+
+# Security-critical (CVE fixes)
+protobuf>=4.25.0,<5.0
+pyyaml>=6.0,<7.0
+
+# Deep Learning
+torch>=2.4.0,<2.5

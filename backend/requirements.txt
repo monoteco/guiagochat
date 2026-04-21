@@ -1,11 +1,18 @@
-fastapi>=0.115.9
-uvicorn>=0.34.0
-langchain>=0.3.25
-langchain-core>=0.3.24
-langchain-community>=0.3.24
-langchain-ollama>=0.3.3
-chromadb>=1.0.7
-python-dotenv>=1.1.0
-pydantic>=2.11.0
-pydantic-settings>=2.9.0
+# FastAPI + Web
+fastapi>=0.115.9,<0.117
+uvicorn>=0.34.0,<0.35
 python-multipart>=0.0.20
+
+# LangChain (RAG)
+langchain>=0.3.25,<0.4
+langchain-core>=0.3.24,<0.4
+langchain-community>=0.3.24,<0.4
+langchain-ollama>=0.3.3,<0.4
+
+# Vector DB
+chromadb>=1.0.7,<2.0
+
+# Config & Validation
+python-dotenv>=1.1.0,<2.0
+pydantic>=2.11.0,<3.0
+pydantic-settings>=2.9.0,<3.0
