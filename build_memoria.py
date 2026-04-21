@@ -75,13 +75,15 @@ for doc, meta in zip(all_docs, all_metas):
     if INTERNAL_DOMAIN in para:
         by_para[para].append((meta, doc))
 
-# ---- Preparar coleccion memoria ----
+# ---- Preparar coleccion memoria (reanudable) ----
 try:
-    client.delete_collection(COLLECTION)
-    print("Coleccion 'memoria' anterior eliminada", flush=True)
+    mem_col = client.get_collection(COLLECTION)
+    existing_ids = set(mem_col.get(include=[])["ids"])
+    print(f"Coleccion 'memoria' existente: {len(existing_ids)} docs. Reanudando...", flush=True)
 except:
-    pass
-mem_col = client.create_collection(COLLECTION)
+    mem_col = client.create_collection(COLLECTION)
+    existing_ids = set()
+    print("Coleccion 'memoria' creada nueva.", flush=True)
 
 def safe_add(col, doc_id, doc_text, meta):
     """Inserta o actualiza un documento en ChromaDB."""
@@ -112,11 +114,14 @@ print(f"\nPersonas internas detectadas: {len(internal_emails)}", flush=True)
 
 for email, items in internal_emails.items():
     count = len(items)
+    doc_id = "persona_" + re.sub(r"[^a-zA-Z0-9_-]", "_", email)[:80]
+    if doc_id in existing_ids:
+        print(f"  [SKIP] {email}", flush=True)
+        continue
     print(f"  [INTERNO] {email} ({count} correos recibidos)...", flush=True)
     ctx = build_context(items)
     user_msg = f"Persona: {email}\nCorreos recibidos: {count}\n\nEMAILS:\n{ctx}"
     summary = call_modal_retry(SYSTEM_INTERNO, user_msg)
-    doc_id = "persona_" + re.sub(r"[^a-zA-Z0-9_-]", "_", email)[:80]
     safe_add(mem_col,
         doc_id,
         f"FICHA DE PERSONA INTERNA: {email}\n\n{summary}",
@@ -141,6 +146,10 @@ for email, items in external_ranked:
     count = len(items)
     fechas = sorted([m.get("fecha","") for m, _ in items if m.get("fecha")])
     primera, ultima = (fechas[0] if fechas else "?"), (fechas[-1] if fechas else "?")
+    doc_id = "contacto_" + re.sub(r"[^a-zA-Z0-9_-]", "_", email)[:80]
+    if doc_id in existing_ids:
+        print(f"  [SKIP] {email}", flush=True)
+        continue
     print(f"  [EXTERNO] {email} ({count} correos)...", flush=True)
     ctx = build_context(items)
     user_msg = (
@@ -148,7 +157,6 @@ for email, items in external_ranked:
         f"Primera comunicacion: {primera}\nUltima comunicacion: {ultima}\n\nEMAILS:\n{ctx}"
     )
     summary = call_modal_retry(SYSTEM_EXTERNO, user_msg)
-    doc_id = "contacto_" + re.sub(r"[^a-zA-Z0-9_-]", "_", email)[:80]
     safe_add(mem_col,
         doc_id,
         f"FICHA DE CONTACTO EXTERNO: {email}\n\nPeriodo: {primera} - {ultima}\n\n{summary}",
